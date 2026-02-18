@@ -21,5 +21,6 @@ target
 #.idea/
 
 proto/
+prompts/
 
 *.DS_Store
