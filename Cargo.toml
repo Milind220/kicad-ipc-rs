@@ -1,0 +1,25 @@
+[package]
+name = "kicad-ipc"
+version = "0.0.0"
+edition = "2021"
+license = "MIT"
+description = "Rust bindings for the KiCad IPC API"
+repository = "https://github.com/kicad-oss/kicad-ipc-rust"
+readme = "README.md"
+
+[features]
+default = ["async"]
+async = ["dep:nng", "dep:prost", "dep:prost-types", "dep:tokio"]
+blocking = ["async"]
+tracing = ["dep:tracing"]
+
+[dependencies]
+nng = { version = "1.0.1", optional = true }
+prost = { version = "0.14.3", optional = true }
+prost-types = { version = "0.14.1", optional = true }
+thiserror = "2.0.12"
+tokio = { version = "1.48.0", features = ["sync", "time", "rt", "macros"], optional = true }
+tracing = { version = "0.1.41", optional = true }
+
+[build-dependencies]
+prost-build = "0.14.1"
