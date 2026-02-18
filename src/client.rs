@@ -205,13 +205,7 @@ impl KiCadClient {
             .clone();
 
         let request_bytes = envelope::encode_request(&token, &self.inner.client_name, command)?;
-
-        let transport = self.inner.clone();
-        let response_bytes = tokio::task::spawn_blocking(move || {
-            transport.transport.roundtrip(request_bytes.as_slice())
-        })
-        .await
-        .map_err(|err| KiCadError::RuntimeJoin(err.to_string()))??;
+        let response_bytes = self.inner.transport.roundtrip(request_bytes).await?;
 
         let response = envelope::decode_response(&response_bytes)?;
 

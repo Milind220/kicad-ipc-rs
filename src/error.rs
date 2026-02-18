@@ -19,6 +19,9 @@ pub enum KiCadError {
     #[error("transport receive failed: {reason}")]
     TransportReceive { reason: String },
 
+    #[error("transport task is unavailable")]
+    TransportClosed,
+
     #[error("request timed out after {timeout:?}")]
     Timeout { timeout: Duration },
 
