@@ -31,6 +31,10 @@ Commands wrapped in this crate but currently unhandled/unsupported by this KiCad
 | --- | --- | --- |
 | `RefreshEditor` | `AS_UNHANDLED` | KiCad responds `no handler available for request of type kiapi.common.commands.RefreshEditor`. |
 
+Deferred manual/runtime verification (implemented after 2026-02-20 while user unavailable):
+
+- `GetKiCadBinaryPath`
+
 ## KiCad v10 RC1.1 API Completion Matrix
 
 Source of truth for this matrix:
@@ -49,12 +53,12 @@ Legend:
 
 | Section | Proto Commands | Implemented | Coverage |
 | --- | ---: | ---: | ---: |
-| Common (base) | 6 | 4 | 67% |
+| Common (base) | 6 | 5 | 83% |
 | Common editor/document | 23 | 15 | 65% |
 | Project manager | 5 | 3 | 60% |
 | Board editor (PCB) | 22 | 20 | 91% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **42** | **75%** |
+| **Total** | **56** | **43** | **77%** |
 
 ### Common (base)
 
@@ -62,7 +66,7 @@ Legend:
 | --- | --- | --- |
 | `Ping` | Implemented | `KiCadClient::ping` |
 | `GetVersion` | Implemented | `KiCadClient::get_version` |
-| `GetKiCadBinaryPath` | Not yet | - |
+| `GetKiCadBinaryPath` | Implemented | `KiCadClient::get_kicad_binary_path_raw`, `KiCadClient::get_kicad_binary_path` |
 | `GetTextExtents` | Implemented | `KiCadClient::get_text_extents_raw`, `KiCadClient::get_text_extents` |
 | `GetTextAsShapes` | Implemented | `KiCadClient::get_text_as_shapes_raw`, `KiCadClient::get_text_as_shapes` |
 | `GetPluginSettingsPath` | Not yet | - |

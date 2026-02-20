@@ -29,6 +29,12 @@ Version:
 cargo run --bin kicad-ipc-cli -- version
 ```
 
+Resolve KiCad binary path (default `kicad-cli`):
+
+```bash
+cargo run --bin kicad-ipc-cli -- kicad-binary-path --binary-name kicad-cli
+```
+
 List open PCB docs:
 
 ```bash
