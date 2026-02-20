@@ -57,6 +57,8 @@ const CMD_GET_BOARD_STACKUP: &str = "kiapi.board.commands.GetBoardStackup";
 const CMD_GET_GRAPHICS_DEFAULTS: &str = "kiapi.board.commands.GetGraphicsDefaults";
 const CMD_GET_BOARD_EDITOR_APPEARANCE_SETTINGS: &str =
     "kiapi.board.commands.GetBoardEditorAppearanceSettings";
+const CMD_SET_BOARD_EDITOR_APPEARANCE_SETTINGS: &str =
+    "kiapi.board.commands.SetBoardEditorAppearanceSettings";
 const CMD_GET_ITEMS_BY_NET: &str = "kiapi.board.commands.GetItemsByNet";
 const CMD_GET_ITEMS_BY_NET_CLASS: &str = "kiapi.board.commands.GetItemsByNetClass";
 const CMD_GET_NETCLASS_FOR_NETS: &str = "kiapi.board.commands.GetNetClassForNets";
@@ -103,6 +105,7 @@ const RES_HIT_TEST_RESPONSE: &str = "kiapi.common.commands.HitTestResponse";
 const RES_TITLE_BLOCK_INFO: &str = "kiapi.common.types.TitleBlockInfo";
 const RES_SAVED_DOCUMENT_RESPONSE: &str = "kiapi.common.commands.SavedDocumentResponse";
 const RES_SAVED_SELECTION_RESPONSE: &str = "kiapi.common.commands.SavedSelectionResponse";
+const RES_PROTOBUF_EMPTY: &str = "google.protobuf.Empty";
 
 const PAD_QUERY_CHUNK_SIZE: usize = 256;
 
@@ -1106,6 +1109,24 @@ impl KiCadClient {
         Ok(map_board_editor_appearance_settings(response))
     }
 
+    pub async fn set_board_editor_appearance_settings(
+        &self,
+        settings: BoardEditorAppearanceSettings,
+    ) -> Result<BoardEditorAppearanceSettings, KiCadError> {
+        let command = board_commands::SetBoardEditorAppearanceSettings {
+            settings: Some(board_editor_appearance_settings_to_proto(settings)),
+        };
+
+        let response = self
+            .send_command(envelope::pack_any(
+                &command,
+                CMD_SET_BOARD_EDITOR_APPEARANCE_SETTINGS,
+            ))
+            .await?;
+        let _ = response_payload_as_any(response, RES_PROTOBUF_EMPTY)?;
+        self.get_board_editor_appearance_settings().await
+    }
+
     pub async fn get_title_block_info(&self) -> Result<TitleBlockInfo, KiCadError> {
         let command = common_commands::GetTitleBlockInfo {
             document: Some(self.current_board_document_proto().await?),
@@ -1930,12 +1951,36 @@ fn map_inactive_layer_display_mode(value: i32) -> InactiveLayerDisplayMode {
     }
 }
 
+fn inactive_layer_display_mode_to_proto(value: InactiveLayerDisplayMode) -> i32 {
+    match value {
+        InactiveLayerDisplayMode::Normal => {
+            board_commands::InactiveLayerDisplayMode::IldmNormal as i32
+        }
+        InactiveLayerDisplayMode::Dimmed => {
+            board_commands::InactiveLayerDisplayMode::IldmDimmed as i32
+        }
+        InactiveLayerDisplayMode::Hidden => {
+            board_commands::InactiveLayerDisplayMode::IldmHidden as i32
+        }
+        InactiveLayerDisplayMode::Unknown(value) => value,
+    }
+}
+
 fn map_net_color_display_mode(value: i32) -> NetColorDisplayMode {
     match board_commands::NetColorDisplayMode::try_from(value) {
         Ok(board_commands::NetColorDisplayMode::NcdmAll) => NetColorDisplayMode::All,
         Ok(board_commands::NetColorDisplayMode::NcdmRatsnest) => NetColorDisplayMode::Ratsnest,
         Ok(board_commands::NetColorDisplayMode::NcdmOff) => NetColorDisplayMode::Off,
         _ => NetColorDisplayMode::Unknown(value),
+    }
+}
+
+fn net_color_display_mode_to_proto(value: NetColorDisplayMode) -> i32 {
+    match value {
+        NetColorDisplayMode::All => board_commands::NetColorDisplayMode::NcdmAll as i32,
+        NetColorDisplayMode::Ratsnest => board_commands::NetColorDisplayMode::NcdmRatsnest as i32,
+        NetColorDisplayMode::Off => board_commands::NetColorDisplayMode::NcdmOff as i32,
+        NetColorDisplayMode::Unknown(value) => value,
     }
 }
 
@@ -1947,6 +1992,14 @@ fn map_board_flip_mode(value: i32) -> BoardFlipMode {
     }
 }
 
+fn board_flip_mode_to_proto(value: BoardFlipMode) -> i32 {
+    match value {
+        BoardFlipMode::Normal => board_commands::BoardFlipMode::BfmNormal as i32,
+        BoardFlipMode::FlippedX => board_commands::BoardFlipMode::BfmFlippedX as i32,
+        BoardFlipMode::Unknown(value) => value,
+    }
+}
+
 fn map_ratsnest_display_mode(value: i32) -> RatsnestDisplayMode {
     match board_commands::RatsnestDisplayMode::try_from(value) {
         Ok(board_commands::RatsnestDisplayMode::RdmAllLayers) => RatsnestDisplayMode::AllLayers,
@@ -1954,6 +2007,16 @@ fn map_ratsnest_display_mode(value: i32) -> RatsnestDisplayMode {
             RatsnestDisplayMode::VisibleLayers
         }
         _ => RatsnestDisplayMode::Unknown(value),
+    }
+}
+
+fn ratsnest_display_mode_to_proto(value: RatsnestDisplayMode) -> i32 {
+    match value {
+        RatsnestDisplayMode::AllLayers => board_commands::RatsnestDisplayMode::RdmAllLayers as i32,
+        RatsnestDisplayMode::VisibleLayers => {
+            board_commands::RatsnestDisplayMode::RdmVisibleLayers as i32
+        }
+        RatsnestDisplayMode::Unknown(value) => value,
     }
 }
 
@@ -2043,6 +2106,19 @@ fn map_board_editor_appearance_settings(
         net_color_display: map_net_color_display_mode(settings.net_color_display),
         board_flip: map_board_flip_mode(settings.board_flip),
         ratsnest_display: map_ratsnest_display_mode(settings.ratsnest_display),
+    }
+}
+
+fn board_editor_appearance_settings_to_proto(
+    settings: BoardEditorAppearanceSettings,
+) -> board_commands::BoardEditorAppearanceSettings {
+    board_commands::BoardEditorAppearanceSettings {
+        inactive_layer_display: inactive_layer_display_mode_to_proto(
+            settings.inactive_layer_display,
+        ),
+        net_color_display: net_color_display_mode_to_proto(settings.net_color_display),
+        board_flip: board_flip_mode_to_proto(settings.board_flip),
+        ratsnest_display: ratsnest_display_mode_to_proto(settings.ratsnest_display),
     }
 }
 
@@ -2777,12 +2853,13 @@ fn default_client_name() -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        any_to_pretty_debug, commit_action_to_proto, ensure_item_request_ok, layer_to_model,
-        map_commit_session, map_hit_test_result, map_item_bounding_boxes, map_polygon_with_holes,
-        model_document_to_proto, normalize_socket_uri, pad_netlist_from_footprint_items,
-        response_payload_as_any, select_single_board_document, select_single_project_path,
-        selection_item_detail, summarize_item_details, summarize_selection,
-        text_horizontal_alignment_to_proto, text_spec_to_proto, PCB_OBJECT_TYPES,
+        any_to_pretty_debug, board_editor_appearance_settings_to_proto, commit_action_to_proto,
+        ensure_item_request_ok, layer_to_model, map_commit_session, map_hit_test_result,
+        map_item_bounding_boxes, map_polygon_with_holes, model_document_to_proto,
+        normalize_socket_uri, pad_netlist_from_footprint_items, response_payload_as_any,
+        select_single_board_document, select_single_project_path, selection_item_detail,
+        summarize_item_details, summarize_selection, text_horizontal_alignment_to_proto,
+        text_spec_to_proto, PCB_OBJECT_TYPES,
     };
     use crate::error::KiCadError;
     use crate::model::common::{
@@ -2951,6 +3028,35 @@ mod tests {
     }
 
     #[test]
+    fn board_editor_appearance_settings_to_proto_maps_known_variants() {
+        let proto = board_editor_appearance_settings_to_proto(
+            crate::model::board::BoardEditorAppearanceSettings {
+                inactive_layer_display: crate::model::board::InactiveLayerDisplayMode::Hidden,
+                net_color_display: crate::model::board::NetColorDisplayMode::Ratsnest,
+                board_flip: crate::model::board::BoardFlipMode::FlippedX,
+                ratsnest_display: crate::model::board::RatsnestDisplayMode::VisibleLayers,
+            },
+        );
+
+        assert_eq!(
+            proto.inactive_layer_display,
+            crate::proto::kiapi::board::commands::InactiveLayerDisplayMode::IldmHidden as i32
+        );
+        assert_eq!(
+            proto.net_color_display,
+            crate::proto::kiapi::board::commands::NetColorDisplayMode::NcdmRatsnest as i32
+        );
+        assert_eq!(
+            proto.board_flip,
+            crate::proto::kiapi::board::commands::BoardFlipMode::BfmFlippedX as i32
+        );
+        assert_eq!(
+            proto.ratsnest_display,
+            crate::proto::kiapi::board::commands::RatsnestDisplayMode::RdmVisibleLayers as i32
+        );
+    }
+
+    #[test]
     fn response_payload_as_any_validates_type_url() {
         let response = crate::proto::kiapi::common::ApiResponse {
             header: None,
@@ -2964,6 +3070,25 @@ mod tests {
         let err = response_payload_as_any(response, "kiapi.common.commands.BeginCommitResponse")
             .expect_err("wrong type_url must fail");
         assert!(matches!(err, KiCadError::UnexpectedPayloadType { .. }));
+    }
+
+    #[test]
+    fn response_payload_as_any_accepts_google_protobuf_empty_type() {
+        let response = crate::proto::kiapi::common::ApiResponse {
+            header: None,
+            status: None,
+            message: Some(prost_types::Any {
+                type_url: super::envelope::type_url("google.protobuf.Empty"),
+                value: Vec::new(),
+            }),
+        };
+
+        let payload = response_payload_as_any(response, "google.protobuf.Empty")
+            .expect("google.protobuf.Empty payload type should be accepted");
+        assert_eq!(
+            payload.type_url,
+            super::envelope::type_url("google.protobuf.Empty")
+        );
     }
 
     #[test]

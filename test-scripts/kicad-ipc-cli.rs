@@ -6,8 +6,9 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use kicad_ipc::{
-    BoardOriginKind, ClientBuilder, CommitAction, CommitSession, DocumentType, EditorFrameType,
-    KiCadClient, KiCadError, PadstackPresenceState, PcbObjectTypeCode, TextObjectSpec,
+    BoardFlipMode, BoardOriginKind, ClientBuilder, CommitAction, CommitSession, DocumentType,
+    EditorFrameType, InactiveLayerDisplayMode, KiCadClient, KiCadError, NetColorDisplayMode,
+    PadstackPresenceState, PcbObjectTypeCode, RatsnestDisplayMode, TextObjectSpec,
     TextShapeGeometry, TextSpec, Vector2Nm,
 };
 
@@ -117,6 +118,12 @@ enum Command {
     Stackup,
     GraphicsDefaults,
     Appearance,
+    SetAppearance {
+        inactive_layer_display: InactiveLayerDisplayMode,
+        net_color_display: NetColorDisplayMode,
+        board_flip: BoardFlipMode,
+        ratsnest_display: RatsnestDisplayMode,
+    },
     NetClass,
     BoardReadReport {
         output: PathBuf,
@@ -651,6 +658,22 @@ async fn run() -> Result<(), KiCadError> {
         Command::Appearance => {
             let appearance = client.get_board_editor_appearance_settings().await?;
             println!("{appearance:#?}");
+        }
+        Command::SetAppearance {
+            inactive_layer_display,
+            net_color_display,
+            board_flip,
+            ratsnest_display,
+        } => {
+            let updated = client
+                .set_board_editor_appearance_settings(kicad_ipc::BoardEditorAppearanceSettings {
+                    inactive_layer_display,
+                    net_color_display,
+                    board_flip,
+                    ratsnest_display,
+                })
+                .await?;
+            println!("{updated:#?}");
         }
         Command::NetClass => {
             let nets = client.get_nets().await?;
@@ -1301,6 +1324,82 @@ fn parse_args_from(mut args: Vec<String>) -> Result<(CliConfig, Command), KiCadE
         "stackup" => Command::Stackup,
         "graphics-defaults" => Command::GraphicsDefaults,
         "appearance" => Command::Appearance,
+        "set-appearance" => {
+            let mut inactive_layer_display = None;
+            let mut net_color_display = None;
+            let mut board_flip = None;
+            let mut ratsnest_display = None;
+            let mut i = 1;
+            while i < args.len() {
+                match args[i].as_str() {
+                    "--inactive-layer-display" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for set-appearance --inactive-layer-display"
+                                .to_string(),
+                        })?;
+                        inactive_layer_display = Some(
+                            parse_inactive_layer_display_mode(value)
+                                .map_err(|err| KiCadError::Config { reason: err })?,
+                        );
+                        i += 2;
+                    }
+                    "--net-color-display" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for set-appearance --net-color-display"
+                                .to_string(),
+                        })?;
+                        net_color_display = Some(
+                            parse_net_color_display_mode(value)
+                                .map_err(|err| KiCadError::Config { reason: err })?,
+                        );
+                        i += 2;
+                    }
+                    "--board-flip" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for set-appearance --board-flip".to_string(),
+                        })?;
+                        board_flip = Some(
+                            parse_board_flip_mode(value)
+                                .map_err(|err| KiCadError::Config { reason: err })?,
+                        );
+                        i += 2;
+                    }
+                    "--ratsnest-display" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for set-appearance --ratsnest-display"
+                                .to_string(),
+                        })?;
+                        ratsnest_display = Some(
+                            parse_ratsnest_display_mode(value)
+                                .map_err(|err| KiCadError::Config { reason: err })?,
+                        );
+                        i += 2;
+                    }
+                    _ => {
+                        i += 1;
+                    }
+                }
+            }
+
+            Command::SetAppearance {
+                inactive_layer_display: inactive_layer_display.ok_or_else(|| KiCadError::Config {
+                    reason: "set-appearance requires `--inactive-layer-display <normal|dimmed|hidden>`".to_string(),
+                })?,
+                net_color_display: net_color_display.ok_or_else(|| KiCadError::Config {
+                    reason: "set-appearance requires `--net-color-display <all|ratsnest|off>`"
+                        .to_string(),
+                })?,
+                board_flip: board_flip.ok_or_else(|| KiCadError::Config {
+                    reason: "set-appearance requires `--board-flip <normal|flipped-x>`"
+                        .to_string(),
+                })?,
+                ratsnest_display: ratsnest_display.ok_or_else(|| KiCadError::Config {
+                    reason:
+                        "set-appearance requires `--ratsnest-display <all-layers|visible-layers>`"
+                            .to_string(),
+                })?,
+            }
+        }
         "netclass" => Command::NetClass,
         "proto-coverage-board-read" => Command::ProtoCoverageBoardRead,
         "board-read-report" => {
@@ -1347,6 +1446,48 @@ fn parse_args_from(mut args: Vec<String>) -> Result<(CliConfig, Command), KiCadE
     Ok((config, command))
 }
 
+fn parse_inactive_layer_display_mode(value: &str) -> Result<InactiveLayerDisplayMode, String> {
+    match value {
+        "normal" => Ok(InactiveLayerDisplayMode::Normal),
+        "dimmed" => Ok(InactiveLayerDisplayMode::Dimmed),
+        "hidden" => Ok(InactiveLayerDisplayMode::Hidden),
+        _ => Err(format!(
+            "unknown inactive layer display `{value}`; expected normal, dimmed, or hidden"
+        )),
+    }
+}
+
+fn parse_net_color_display_mode(value: &str) -> Result<NetColorDisplayMode, String> {
+    match value {
+        "all" => Ok(NetColorDisplayMode::All),
+        "ratsnest" => Ok(NetColorDisplayMode::Ratsnest),
+        "off" => Ok(NetColorDisplayMode::Off),
+        _ => Err(format!(
+            "unknown net color display `{value}`; expected all, ratsnest, or off"
+        )),
+    }
+}
+
+fn parse_board_flip_mode(value: &str) -> Result<BoardFlipMode, String> {
+    match value {
+        "normal" => Ok(BoardFlipMode::Normal),
+        "flipped-x" => Ok(BoardFlipMode::FlippedX),
+        _ => Err(format!(
+            "unknown board flip mode `{value}`; expected normal or flipped-x"
+        )),
+    }
+}
+
+fn parse_ratsnest_display_mode(value: &str) -> Result<RatsnestDisplayMode, String> {
+    match value {
+        "all-layers" => Ok(RatsnestDisplayMode::AllLayers),
+        "visible-layers" => Ok(RatsnestDisplayMode::VisibleLayers),
+        _ => Err(format!(
+            "unknown ratsnest display `{value}`; expected all-layers or visible-layers"
+        )),
+    }
+}
+
 fn default_config() -> CliConfig {
     CliConfig {
         socket: None,
@@ -1358,7 +1499,7 @@ fn default_config() -> CliConfig {
 
 fn print_help() {
     println!(
-        "kicad-ipc-cli\n\nUSAGE:\n  cargo run --bin kicad-ipc-cli -- [--socket URI] [--token TOKEN] [--client-name NAME] [--timeout-ms N] <command> [command options]\n\nCOMMANDS:\n  ping                         Check IPC connectivity\n  version                      Fetch KiCad version\n  open-docs [--type <type>]    List open docs (default type: pcb)\n  project-path                 Get current project path from open PCB docs\n  board-open                   Exit non-zero if no PCB doc is open\n  net-classes                  List project netclass definitions\n  text-variables               List text variables for current board document\n  expand-text-variables        Expand variables in provided text values\n                               Options: --text <value> (repeatable)\n  text-extents                 Measure text bounding box\n                               Options: --text <value>\n  text-as-shapes               Convert text to rendered shapes\n                               Options: --text <value> (repeatable)\n  nets                         List board nets (requires one open PCB)\n  netlist-pads                 Emit pad-level netlist data (with footprint context)\n  items-by-id --id <uuid> ...  Show parsed details for specific item IDs\n  item-bbox --id <uuid> ...    Show bounding boxes for item IDs\n  hit-test --id <uuid> --x-nm <x> --y-nm <y> [--tolerance-nm <n>]\n                               Hit-test one item at a point\n  types-pcb                    List PCB KiCad object type IDs from proto enum\n  items-raw --type-id <id> ... Dump raw Any payloads for requested item type IDs\n  items-raw-all-pcb [--debug]  Dump all PCB item payloads across all PCB object types\n  pad-shape-polygon --pad-id <uuid> ... --layer-id <i32> [--debug]\n                               Dump pad polygons on a target layer\n  padstack-presence --item-id <uuid> ... --layer-id <i32> ... [--debug]\n                               Check padstack shape presence matrix across layers\n  title-block                  Show title block fields\n  board-as-string              Dump board as KiCad s-expression text\n  selection-as-string          Dump current selection as KiCad s-expression text\n  stackup                      Show typed board stackup\n  graphics-defaults            Show typed graphics defaults\n  appearance                   Show typed editor appearance settings\n  netclass                     Show typed netclass map for current board nets\n  proto-coverage-board-read    Print board-read command coverage vs proto\n  board-read-report [--out P]  Write markdown board reconstruction report\n  enabled-layers               List enabled board layers\n  set-enabled-layers --copper-layer-count <u32> [--layer-id <i32> ...]\n                               Set enabled board layer set\n  active-layer                 Show active board layer\n  set-active-layer --layer-id <i32>\n                               Set active board layer\n  visible-layers               Show currently visible board layers\n  set-visible-layers --layer-id <i32> ...\n                               Set visible board layers\n  board-origin [--type <t>]    Show board origin (`grid` default, or `drill`)\n  set-board-origin --type <t> --x-nm <i64> --y-nm <i64>\n                               Set board origin (`grid` or `drill`)\n  refresh-editor [--frame <f>] Refresh a specific editor frame (default: pcb)\n  begin-commit                 Start staged commit and print commit ID\n  end-commit --id <uuid> [--action <commit|drop>] [--message <text>]\n                               End staged commit with commit/drop action\n  selection-summary            Show current selection item type counts\n  selection-details            Show parsed details for selected items\n  selection-raw                Show raw Any payload bytes for selected items\n  smoke                        ping + version + board-open summary\n  help                         Show help\n\nTYPES:\n  schematic | symbol | pcb | footprint | drawing-sheet | project\n"
+        "kicad-ipc-cli\n\nUSAGE:\n  cargo run --bin kicad-ipc-cli -- [--socket URI] [--token TOKEN] [--client-name NAME] [--timeout-ms N] <command> [command options]\n\nCOMMANDS:\n  ping                         Check IPC connectivity\n  version                      Fetch KiCad version\n  open-docs [--type <type>]    List open docs (default type: pcb)\n  project-path                 Get current project path from open PCB docs\n  board-open                   Exit non-zero if no PCB doc is open\n  net-classes                  List project netclass definitions\n  text-variables               List text variables for current board document\n  expand-text-variables        Expand variables in provided text values\n                               Options: --text <value> (repeatable)\n  text-extents                 Measure text bounding box\n                               Options: --text <value>\n  text-as-shapes               Convert text to rendered shapes\n                               Options: --text <value> (repeatable)\n  nets                         List board nets (requires one open PCB)\n  netlist-pads                 Emit pad-level netlist data (with footprint context)\n  items-by-id --id <uuid> ...  Show parsed details for specific item IDs\n  item-bbox --id <uuid> ...    Show bounding boxes for item IDs\n  hit-test --id <uuid> --x-nm <x> --y-nm <y> [--tolerance-nm <n>]\n                               Hit-test one item at a point\n  types-pcb                    List PCB KiCad object type IDs from proto enum\n  items-raw --type-id <id> ... Dump raw Any payloads for requested item type IDs\n  items-raw-all-pcb [--debug]  Dump all PCB item payloads across all PCB object types\n  pad-shape-polygon --pad-id <uuid> ... --layer-id <i32> [--debug]\n                               Dump pad polygons on a target layer\n  padstack-presence --item-id <uuid> ... --layer-id <i32> ... [--debug]\n                               Check padstack shape presence matrix across layers\n  title-block                  Show title block fields\n  board-as-string              Dump board as KiCad s-expression text\n  selection-as-string          Dump current selection as KiCad s-expression text\n  stackup                      Show typed board stackup\n  graphics-defaults            Show typed graphics defaults\n  appearance                   Show typed editor appearance settings\n  set-appearance --inactive-layer-display <normal|dimmed|hidden>\n                 --net-color-display <all|ratsnest|off>\n                 --board-flip <normal|flipped-x>\n                 --ratsnest-display <all-layers|visible-layers>\n                               Set editor appearance settings\n  netclass                     Show typed netclass map for current board nets\n  proto-coverage-board-read    Print board-read command coverage vs proto\n  board-read-report [--out P]  Write markdown board reconstruction report\n  enabled-layers               List enabled board layers\n  set-enabled-layers --copper-layer-count <u32> [--layer-id <i32> ...]\n                               Set enabled board layer set\n  active-layer                 Show active board layer\n  set-active-layer --layer-id <i32>\n                               Set active board layer\n  visible-layers               Show currently visible board layers\n  set-visible-layers --layer-id <i32> ...\n                               Set visible board layers\n  board-origin [--type <t>]    Show board origin (`grid` default, or `drill`)\n  set-board-origin --type <t> --x-nm <i64> --y-nm <i64>\n                               Set board origin (`grid` or `drill`)\n  refresh-editor [--frame <f>] Refresh a specific editor frame (default: pcb)\n  begin-commit                 Start staged commit and print commit ID\n  end-commit --id <uuid> [--action <commit|drop>] [--message <text>]\n                               End staged commit with commit/drop action\n  selection-summary            Show current selection item type counts\n  selection-details            Show parsed details for selected items\n  selection-raw                Show raw Any payload bytes for selected items\n  smoke                        ping + version + board-open summary\n  help                         Show help\n\nTYPES:\n  schematic | symbol | pcb | footprint | drawing-sheet | project\n"
     );
 }
 
@@ -1911,7 +2052,10 @@ fn hex_char(value: u8) -> char {
 #[cfg(test)]
 mod tests {
     use super::{parse_args_from, Command};
-    use kicad_ipc::{BoardOriginKind, CommitAction};
+    use kicad_ipc::{
+        BoardFlipMode, BoardOriginKind, CommitAction, InactiveLayerDisplayMode,
+        NetColorDisplayMode, RatsnestDisplayMode,
+    };
 
     #[test]
     fn parse_args_accepts_client_name_for_commit_flow() {
@@ -2045,6 +2189,37 @@ mod tests {
                 assert_eq!(kind, BoardOriginKind::Drill);
                 assert_eq!(x_nm, 123);
                 assert_eq!(y_nm, 456);
+            }
+            other => panic!("unexpected command variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_args_parses_set_appearance() {
+        let (_, command) = parse_args_from(vec![
+            "set-appearance".to_string(),
+            "--inactive-layer-display".to_string(),
+            "hidden".to_string(),
+            "--net-color-display".to_string(),
+            "off".to_string(),
+            "--board-flip".to_string(),
+            "flipped-x".to_string(),
+            "--ratsnest-display".to_string(),
+            "visible-layers".to_string(),
+        ])
+        .expect("set-appearance args should parse");
+
+        match command {
+            Command::SetAppearance {
+                inactive_layer_display,
+                net_color_display,
+                board_flip,
+                ratsnest_display,
+            } => {
+                assert_eq!(inactive_layer_display, InactiveLayerDisplayMode::Hidden);
+                assert_eq!(net_color_display, NetColorDisplayMode::Off);
+                assert_eq!(board_flip, BoardFlipMode::FlippedX);
+                assert_eq!(ratsnest_display, RatsnestDisplayMode::VisibleLayers);
             }
             other => panic!("unexpected command variant: {other:?}"),
         }

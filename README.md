@@ -41,9 +41,9 @@ Legend:
 | Common (base) | 6 | 4 | 67% |
 | Common editor/document | 23 | 12 | 52% |
 | Project manager | 5 | 3 | 60% |
-| Board editor (PCB) | 22 | 17 | 77% |
+| Board editor (PCB) | 22 | 18 | 82% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **36** | **64%** |
+| **Total** | **56** | **37** | **66%** |
 
 ### Common (base)
 
@@ -118,7 +118,7 @@ Legend:
 | `GetActiveLayer` | Implemented | `KiCadClient::get_active_layer` |
 | `SetActiveLayer` | Implemented | `KiCadClient::set_active_layer` |
 | `GetBoardEditorAppearanceSettings` | Implemented | `KiCadClient::get_board_editor_appearance_settings_raw`, `KiCadClient::get_board_editor_appearance_settings` |
-| `SetBoardEditorAppearanceSettings` | Not yet | - |
+| `SetBoardEditorAppearanceSettings` | Implemented | `KiCadClient::set_board_editor_appearance_settings` |
 | `InteractiveMoveItems` | Not yet | - |
 
 ### Schematic editor

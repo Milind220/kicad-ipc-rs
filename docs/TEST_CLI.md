@@ -255,6 +255,12 @@ cargo run --bin kicad-ipc-cli -- graphics-defaults
 cargo run --bin kicad-ipc-cli -- appearance
 ```
 
+Set editor appearance:
+
+```bash
+cargo run --bin kicad-ipc-cli -- set-appearance --inactive-layer-display hidden --net-color-display all --board-flip normal --ratsnest-display all-layers
+```
+
 Show typed netclass map:
 
 ```bash
