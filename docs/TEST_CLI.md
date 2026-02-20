@@ -110,7 +110,13 @@ cargo run --bin kicad-ipc-cli -- board-origin --type drill
 Start a staged commit and print commit ID:
 
 ```bash
-cargo run --bin kicad-ipc-cli -- begin-commit
+cargo run --bin kicad-ipc-cli -- --client-name write-test begin-commit
+```
+
+End a staged commit:
+
+```bash
+cargo run --bin kicad-ipc-cli -- --client-name write-test end-commit --id <commit-id> --action drop --message "cli test cleanup"
 ```
 
 Show summary of current PCB selection by item type:
@@ -263,6 +269,12 @@ Custom token:
 
 ```bash
 cargo run --bin kicad-ipc-cli -- --token "$KICAD_API_TOKEN" version
+```
+
+Stable client name (needed when pairing `begin-commit` and `end-commit` across separate CLI runs):
+
+```bash
+cargo run --bin kicad-ipc-cli -- --client-name write-test begin-commit
 ```
 
 Custom timeout:

@@ -18,11 +18,11 @@ use crate::model::board::{
     Vector2Nm,
 };
 use crate::model::common::{
-    CommitSession, DocumentSpecifier, DocumentType, ItemBoundingBox, ItemHitTestResult,
-    PcbObjectTypeCode, ProjectInfo, SelectionItemDetail, SelectionSummary, SelectionTypeCount,
-    TextAsShapesEntry, TextAttributesSpec, TextBoxSpec, TextExtents, TextHorizontalAlignment,
-    TextObjectSpec, TextShape, TextShapeGeometry, TextSpec, TextVerticalAlignment, TitleBlockInfo,
-    VersionInfo,
+    CommitAction, CommitSession, DocumentSpecifier, DocumentType, ItemBoundingBox,
+    ItemHitTestResult, PcbObjectTypeCode, ProjectInfo, SelectionItemDetail, SelectionSummary,
+    SelectionTypeCount, TextAsShapesEntry, TextAttributesSpec, TextBoxSpec, TextExtents,
+    TextHorizontalAlignment, TextObjectSpec, TextShape, TextShapeGeometry, TextSpec,
+    TextVerticalAlignment, TitleBlockInfo, VersionInfo,
 };
 use crate::proto::kiapi::board as board_proto;
 use crate::proto::kiapi::board::commands as board_commands;
@@ -60,6 +60,7 @@ const CMD_CHECK_PADSTACK_PRESENCE_ON_LAYERS: &str =
     "kiapi.board.commands.CheckPadstackPresenceOnLayers";
 const CMD_GET_SELECTION: &str = "kiapi.common.commands.GetSelection";
 const CMD_BEGIN_COMMIT: &str = "kiapi.common.commands.BeginCommit";
+const CMD_END_COMMIT: &str = "kiapi.common.commands.EndCommit";
 const CMD_GET_ITEMS: &str = "kiapi.common.commands.GetItems";
 const CMD_GET_ITEMS_BY_ID: &str = "kiapi.common.commands.GetItemsById";
 const CMD_GET_BOUNDING_BOX: &str = "kiapi.common.commands.GetBoundingBox";
@@ -90,6 +91,7 @@ const RES_PADSTACK_PRESENCE_RESPONSE: &str = "kiapi.board.commands.PadstackPrese
 const RES_VECTOR2: &str = "kiapi.common.types.Vector2";
 const RES_SELECTION_RESPONSE: &str = "kiapi.common.commands.SelectionResponse";
 const RES_BEGIN_COMMIT_RESPONSE: &str = "kiapi.common.commands.BeginCommitResponse";
+const RES_END_COMMIT_RESPONSE: &str = "kiapi.common.commands.EndCommitResponse";
 const RES_GET_ITEMS_RESPONSE: &str = "kiapi.common.commands.GetItemsResponse";
 const RES_GET_BOUNDING_BOX_RESPONSE: &str = "kiapi.common.commands.GetBoundingBoxResponse";
 const RES_HIT_TEST_RESPONSE: &str = "kiapi.common.commands.HitTestResponse";
@@ -478,6 +480,39 @@ impl KiCadClient {
         let response: common_commands::BeginCommitResponse =
             decode_any(&payload, RES_BEGIN_COMMIT_RESPONSE)?;
         map_commit_session(response)
+    }
+
+    pub async fn end_commit_raw(
+        &self,
+        session: CommitSession,
+        action: CommitAction,
+        message: impl Into<String>,
+    ) -> Result<prost_types::Any, KiCadError> {
+        if session.id.is_empty() {
+            return Err(KiCadError::Config {
+                reason: "end_commit_raw requires a non-empty commit session id".to_string(),
+            });
+        }
+
+        let command = common_commands::EndCommit {
+            id: Some(common_types::Kiid { value: session.id }),
+            action: commit_action_to_proto(action),
+            message: message.into(),
+        };
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_END_COMMIT))
+            .await?;
+        response_payload_as_any(response, RES_END_COMMIT_RESPONSE)
+    }
+
+    pub async fn end_commit(
+        &self,
+        session: CommitSession,
+        action: CommitAction,
+        message: impl Into<String>,
+    ) -> Result<(), KiCadError> {
+        self.end_commit_raw(session, action, message).await?;
+        Ok(())
     }
 
     pub async fn get_nets(&self) -> Result<Vec<BoardNet>, KiCadError> {
@@ -1531,6 +1566,13 @@ fn board_origin_kind_to_proto(kind: BoardOriginKind) -> i32 {
     match kind {
         BoardOriginKind::Grid => board_commands::BoardOriginType::BotGrid as i32,
         BoardOriginKind::Drill => board_commands::BoardOriginType::BotDrill as i32,
+    }
+}
+
+fn commit_action_to_proto(action: CommitAction) -> i32 {
+    match action {
+        CommitAction::Commit => common_commands::CommitAction::CmaCommit as i32,
+        CommitAction::Drop => common_commands::CommitAction::CmaDrop as i32,
     }
 }
 
@@ -2651,8 +2693,8 @@ fn default_client_name() -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        any_to_pretty_debug, ensure_item_request_ok, layer_to_model, map_commit_session,
-        map_hit_test_result, map_item_bounding_boxes, map_polygon_with_holes,
+        any_to_pretty_debug, commit_action_to_proto, ensure_item_request_ok, layer_to_model,
+        map_commit_session, map_hit_test_result, map_item_bounding_boxes, map_polygon_with_holes,
         model_document_to_proto, normalize_socket_uri, pad_netlist_from_footprint_items,
         response_payload_as_any, select_single_board_document, select_single_project_path,
         selection_item_detail, summarize_item_details, summarize_selection,
@@ -2660,8 +2702,8 @@ mod tests {
     };
     use crate::error::KiCadError;
     use crate::model::common::{
-        DocumentSpecifier, DocumentType, ProjectInfo, TextAttributesSpec, TextHorizontalAlignment,
-        TextSpec,
+        CommitAction, DocumentSpecifier, DocumentType, ProjectInfo, TextAttributesSpec,
+        TextHorizontalAlignment, TextSpec,
     };
     use prost::Message;
     use std::path::PathBuf;
@@ -2810,6 +2852,18 @@ mod tests {
         let response = crate::proto::kiapi::common::commands::BeginCommitResponse { id: None };
         let err = map_commit_session(response).expect_err("missing id must fail");
         assert!(matches!(err, KiCadError::InvalidResponse { .. }));
+    }
+
+    #[test]
+    fn commit_action_to_proto_maps_known_variants() {
+        assert_eq!(
+            commit_action_to_proto(CommitAction::Commit),
+            crate::proto::kiapi::common::commands::CommitAction::CmaCommit as i32
+        );
+        assert_eq!(
+            commit_action_to_proto(CommitAction::Drop),
+            crate::proto::kiapi::common::commands::CommitAction::CmaDrop as i32
+        );
     }
 
     #[test]

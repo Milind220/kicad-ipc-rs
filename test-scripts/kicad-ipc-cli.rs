@@ -6,8 +6,9 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use kicad_ipc::{
-    BoardOriginKind, ClientBuilder, DocumentType, KiCadClient, KiCadError, PadstackPresenceState,
-    PcbObjectTypeCode, TextObjectSpec, TextShapeGeometry, TextSpec, Vector2Nm,
+    BoardOriginKind, ClientBuilder, CommitAction, CommitSession, DocumentType, KiCadClient,
+    KiCadError, PadstackPresenceState, PcbObjectTypeCode, TextObjectSpec, TextShapeGeometry,
+    TextSpec, Vector2Nm,
 };
 
 const REPORT_MAX_PAD_NET_ROWS: usize = 2_000;
@@ -20,6 +21,7 @@ const REPORT_MAX_BOARD_SNAPSHOT_CHARS: usize = 750_000;
 struct CliConfig {
     socket: Option<String>,
     token: Option<String>,
+    client_name: Option<String>,
     timeout_ms: u64,
 }
 
@@ -51,6 +53,11 @@ enum Command {
         kind: BoardOriginKind,
     },
     BeginCommit,
+    EndCommit {
+        id: String,
+        action: CommitAction,
+        message: String,
+    },
     SelectionSummary,
     SelectionDetails,
     SelectionRaw,
@@ -141,6 +148,9 @@ async fn run() -> Result<(), KiCadError> {
     }
     if let Some(token) = config.token {
         builder = builder.token(token);
+    }
+    if let Some(client_name) = config.client_name {
+        builder = builder.client_name(client_name);
     }
 
     let client = builder.connect().await?;
@@ -313,6 +323,16 @@ async fn run() -> Result<(), KiCadError> {
         Command::BeginCommit => {
             let session = client.begin_commit().await?;
             println!("commit_id={}", session.id);
+        }
+        Command::EndCommit {
+            id,
+            action,
+            message,
+        } => {
+            client
+                .end_commit(CommitSession { id }, action, message)
+                .await?;
+            println!("end_commit=ok action={}", action);
         }
         Command::SelectionSummary => {
             let summary = client.get_selection_summary().await?;
@@ -615,8 +635,10 @@ async fn run() -> Result<(), KiCadError> {
 }
 
 fn parse_args() -> Result<(CliConfig, Command), KiCadError> {
-    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    parse_args_from(std::env::args().skip(1).collect())
+}
 
+fn parse_args_from(mut args: Vec<String>) -> Result<(CliConfig, Command), KiCadError> {
     if args.is_empty() {
         return Ok((default_config(), Command::Help));
     }
@@ -638,6 +660,13 @@ fn parse_args() -> Result<(CliConfig, Command), KiCadError> {
                     reason: "missing value for --token".to_string(),
                 })?;
                 config.token = Some(value.clone());
+                args.drain(index..=index + 1);
+            }
+            "--client-name" => {
+                let value = args.get(index + 1).ok_or_else(|| KiCadError::Config {
+                    reason: "missing value for --client-name".to_string(),
+                })?;
+                config.client_name = Some(value.clone());
                 args.drain(index..=index + 1);
             }
             "--timeout-ms" => {
@@ -767,6 +796,49 @@ fn parse_args() -> Result<(CliConfig, Command), KiCadError> {
             Command::BoardOrigin { kind }
         }
         "begin-commit" => Command::BeginCommit,
+        "end-commit" => {
+            let mut id = None;
+            let mut action = CommitAction::Commit;
+            let mut message = String::new();
+            let mut i = 1;
+            while i < args.len() {
+                match args[i].as_str() {
+                    "--id" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for end-commit --id".to_string(),
+                        })?;
+                        id = Some(value.clone());
+                        i += 2;
+                    }
+                    "--action" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for end-commit --action".to_string(),
+                        })?;
+                        action = CommitAction::from_str(value)
+                            .map_err(|err| KiCadError::Config { reason: err })?;
+                        i += 2;
+                    }
+                    "--message" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for end-commit --message".to_string(),
+                        })?;
+                        message = value.clone();
+                        i += 2;
+                    }
+                    _ => {
+                        i += 1;
+                    }
+                }
+            }
+
+            Command::EndCommit {
+                id: id.ok_or_else(|| KiCadError::Config {
+                    reason: "end-commit requires `--id <uuid>`".to_string(),
+                })?,
+                action,
+                message,
+            }
+        }
         "selection-summary" => Command::SelectionSummary,
         "selection-details" => Command::SelectionDetails,
         "selection-raw" => Command::SelectionRaw,
@@ -1075,13 +1147,14 @@ fn default_config() -> CliConfig {
     CliConfig {
         socket: None,
         token: None,
+        client_name: None,
         timeout_ms: 15_000,
     }
 }
 
 fn print_help() {
     println!(
-        "kicad-ipc-cli\n\nUSAGE:\n  cargo run --bin kicad-ipc-cli -- [--socket URI] [--token TOKEN] [--timeout-ms N] <command> [command options]\n\nCOMMANDS:\n  ping                         Check IPC connectivity\n  version                      Fetch KiCad version\n  open-docs [--type <type>]    List open docs (default type: pcb)\n  project-path                 Get current project path from open PCB docs\n  board-open                   Exit non-zero if no PCB doc is open\n  net-classes                  List project netclass definitions\n  text-variables               List text variables for current board document\n  expand-text-variables        Expand variables in provided text values\n                               Options: --text <value> (repeatable)\n  text-extents                 Measure text bounding box\n                               Options: --text <value>\n  text-as-shapes               Convert text to rendered shapes\n                               Options: --text <value> (repeatable)\n  nets                         List board nets (requires one open PCB)\n  netlist-pads                 Emit pad-level netlist data (with footprint context)\n  items-by-id --id <uuid> ...  Show parsed details for specific item IDs\n  item-bbox --id <uuid> ...    Show bounding boxes for item IDs\n  hit-test --id <uuid> --x-nm <x> --y-nm <y> [--tolerance-nm <n>]\n                               Hit-test one item at a point\n  types-pcb                    List PCB KiCad object type IDs from proto enum\n  items-raw --type-id <id> ... Dump raw Any payloads for requested item type IDs\n  items-raw-all-pcb [--debug]  Dump all PCB item payloads across all PCB object types\n  pad-shape-polygon --pad-id <uuid> ... --layer-id <i32> [--debug]\n                               Dump pad polygons on a target layer\n  padstack-presence --item-id <uuid> ... --layer-id <i32> ... [--debug]\n                               Check padstack shape presence matrix across layers\n  title-block                  Show title block fields\n  board-as-string              Dump board as KiCad s-expression text\n  selection-as-string          Dump current selection as KiCad s-expression text\n  stackup                      Show typed board stackup\n  graphics-defaults            Show typed graphics defaults\n  appearance                   Show typed editor appearance settings\n  netclass                     Show typed netclass map for current board nets\n  proto-coverage-board-read    Print board-read command coverage vs proto\n  board-read-report [--out P]  Write markdown board reconstruction report\n  enabled-layers               List enabled board layers\n  active-layer                 Show active board layer\n  visible-layers               Show currently visible board layers\n  board-origin [--type <t>]    Show board origin (`grid` default, or `drill`)\n  begin-commit                 Start staged commit and print commit ID\n  selection-summary            Show current selection item type counts\n  selection-details            Show parsed details for selected items\n  selection-raw                Show raw Any payload bytes for selected items\n  smoke                        ping + version + board-open summary\n  help                         Show help\n\nTYPES:\n  schematic | symbol | pcb | footprint | drawing-sheet | project\n"
+        "kicad-ipc-cli\n\nUSAGE:\n  cargo run --bin kicad-ipc-cli -- [--socket URI] [--token TOKEN] [--client-name NAME] [--timeout-ms N] <command> [command options]\n\nCOMMANDS:\n  ping                         Check IPC connectivity\n  version                      Fetch KiCad version\n  open-docs [--type <type>]    List open docs (default type: pcb)\n  project-path                 Get current project path from open PCB docs\n  board-open                   Exit non-zero if no PCB doc is open\n  net-classes                  List project netclass definitions\n  text-variables               List text variables for current board document\n  expand-text-variables        Expand variables in provided text values\n                               Options: --text <value> (repeatable)\n  text-extents                 Measure text bounding box\n                               Options: --text <value>\n  text-as-shapes               Convert text to rendered shapes\n                               Options: --text <value> (repeatable)\n  nets                         List board nets (requires one open PCB)\n  netlist-pads                 Emit pad-level netlist data (with footprint context)\n  items-by-id --id <uuid> ...  Show parsed details for specific item IDs\n  item-bbox --id <uuid> ...    Show bounding boxes for item IDs\n  hit-test --id <uuid> --x-nm <x> --y-nm <y> [--tolerance-nm <n>]\n                               Hit-test one item at a point\n  types-pcb                    List PCB KiCad object type IDs from proto enum\n  items-raw --type-id <id> ... Dump raw Any payloads for requested item type IDs\n  items-raw-all-pcb [--debug]  Dump all PCB item payloads across all PCB object types\n  pad-shape-polygon --pad-id <uuid> ... --layer-id <i32> [--debug]\n                               Dump pad polygons on a target layer\n  padstack-presence --item-id <uuid> ... --layer-id <i32> ... [--debug]\n                               Check padstack shape presence matrix across layers\n  title-block                  Show title block fields\n  board-as-string              Dump board as KiCad s-expression text\n  selection-as-string          Dump current selection as KiCad s-expression text\n  stackup                      Show typed board stackup\n  graphics-defaults            Show typed graphics defaults\n  appearance                   Show typed editor appearance settings\n  netclass                     Show typed netclass map for current board nets\n  proto-coverage-board-read    Print board-read command coverage vs proto\n  board-read-report [--out P]  Write markdown board reconstruction report\n  enabled-layers               List enabled board layers\n  active-layer                 Show active board layer\n  visible-layers               Show currently visible board layers\n  board-origin [--type <t>]    Show board origin (`grid` default, or `drill`)\n  begin-commit                 Start staged commit and print commit ID\n  end-commit --id <uuid> [--action <commit|drop>] [--message <text>]\n                               End staged commit with commit/drop action\n  selection-summary            Show current selection item type counts\n  selection-details            Show parsed details for selected items\n  selection-raw                Show raw Any payload bytes for selected items\n  smoke                        ping + version + board-open summary\n  help                         Show help\n\nTYPES:\n  schematic | symbol | pcb | footprint | drawing-sheet | project\n"
     );
 }
 
@@ -1628,5 +1701,51 @@ fn hex_char(value: u8) -> char {
         0..=9 => char::from(b'0' + value),
         10..=15 => char::from(b'a' + (value - 10)),
         _ => '?',
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_args_from, Command};
+    use kicad_ipc::CommitAction;
+
+    #[test]
+    fn parse_args_accepts_client_name_for_commit_flow() {
+        let (config, command) = parse_args_from(vec![
+            "--client-name".to_string(),
+            "write-test".to_string(),
+            "begin-commit".to_string(),
+        ])
+        .expect("client-name + begin-commit should parse");
+
+        assert_eq!(config.client_name.as_deref(), Some("write-test"));
+        assert!(matches!(command, Command::BeginCommit));
+    }
+
+    #[test]
+    fn parse_args_parses_end_commit_flags() {
+        let (_, command) = parse_args_from(vec![
+            "end-commit".to_string(),
+            "--id".to_string(),
+            "commit-1".to_string(),
+            "--action".to_string(),
+            "drop".to_string(),
+            "--message".to_string(),
+            "cleanup".to_string(),
+        ])
+        .expect("end-commit args should parse");
+
+        match command {
+            Command::EndCommit {
+                id,
+                action,
+                message,
+            } => {
+                assert_eq!(id, "commit-1");
+                assert_eq!(action, CommitAction::Drop);
+                assert_eq!(message, "cleanup");
+            }
+            other => panic!("unexpected command variant: {other:?}"),
+        }
     }
 }

@@ -118,6 +118,35 @@ pub struct CommitSession {
     pub id: String,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CommitAction {
+    Commit,
+    Drop,
+}
+
+impl std::fmt::Display for CommitAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Commit => write!(f, "commit"),
+            Self::Drop => write!(f, "drop"),
+        }
+    }
+}
+
+impl FromStr for CommitAction {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "commit" => Ok(Self::Commit),
+            "drop" => Ok(Self::Drop),
+            _ => Err(format!(
+                "unknown commit action `{value}`; expected `commit` or `drop`"
+            )),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TitleBlockInfo {
     pub title: String,
@@ -302,5 +331,22 @@ impl std::fmt::Display for ItemHitTestResult {
         };
 
         write!(f, "{value}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CommitAction;
+    use std::str::FromStr;
+
+    #[test]
+    fn commit_action_parses_known_values() {
+        assert_eq!(CommitAction::from_str("commit"), Ok(CommitAction::Commit));
+        assert_eq!(CommitAction::from_str("drop"), Ok(CommitAction::Drop));
+    }
+
+    #[test]
+    fn commit_action_rejects_unknown_values() {
+        assert!(CommitAction::from_str("rollback").is_err());
     }
 }
