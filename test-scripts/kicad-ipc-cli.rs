@@ -6,8 +6,8 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use kicad_ipc::{
-    BoardOriginKind, ClientBuilder, DocumentType, KiCadClient, KiCadError, PcbObjectTypeCode,
-    Vector2Nm,
+    BoardOriginKind, ClientBuilder, DocumentType, KiCadClient, KiCadError, PadstackPresenceState,
+    PcbObjectTypeCode, Vector2Nm,
 };
 
 const REPORT_MAX_PAD_NET_ROWS: usize = 2_000;
@@ -77,10 +77,10 @@ enum Command {
     TitleBlock,
     BoardAsString,
     SelectionAsString,
-    StackupDebug,
-    GraphicsDefaultsDebug,
-    AppearanceDebug,
-    NetClassDebug,
+    Stackup,
+    GraphicsDefaults,
+    Appearance,
+    NetClass,
     BoardReadReport {
         output: PathBuf,
     },
@@ -417,10 +417,15 @@ async fn run() -> Result<(), KiCadError> {
                 );
             }
             if include_debug {
-                let debug = client
-                    .get_pad_shape_as_polygon_debug(pad_ids, layer_id)
+                let raw_chunks = client
+                    .get_pad_shape_as_polygon_raw(pad_ids, layer_id)
                     .await?;
-                println!("debug={}", debug.replace('\n', "\\n").replace('\t', " "));
+                for (chunk_index, chunk) in raw_chunks.iter().enumerate() {
+                    let debug = kicad_ipc::KiCadClient::debug_any_item(chunk)?
+                        .replace('\n', "\\n")
+                        .replace('\t', " ");
+                    println!("raw_chunk={chunk_index} debug={debug}");
+                }
             }
         }
         Command::PadstackPresence {
@@ -444,10 +449,15 @@ async fn run() -> Result<(), KiCadError> {
                 );
             }
             if include_debug {
-                let debug = client
-                    .check_padstack_presence_on_layers_debug(item_ids, layer_ids)
+                let raw_chunks = client
+                    .check_padstack_presence_on_layers_raw(item_ids, layer_ids)
                     .await?;
-                println!("debug={}", debug.replace('\n', "\\n").replace('\t', " "));
+                for (chunk_index, chunk) in raw_chunks.iter().enumerate() {
+                    let debug = kicad_ipc::KiCadClient::debug_any_item(chunk)?
+                        .replace('\n', "\\n")
+                        .replace('\t', " ");
+                    println!("raw_chunk={chunk_index} debug={debug}");
+                }
             }
         }
         Command::TitleBlock => {
@@ -468,22 +478,22 @@ async fn run() -> Result<(), KiCadError> {
             let content = client.get_selection_as_string().await?;
             println!("{content}");
         }
-        Command::StackupDebug => {
-            let debug = client.get_board_stackup_debug().await?;
-            println!("{debug}");
+        Command::Stackup => {
+            let stackup = client.get_board_stackup().await?;
+            println!("{stackup:#?}");
         }
-        Command::GraphicsDefaultsDebug => {
-            let debug = client.get_graphics_defaults_debug().await?;
-            println!("{debug}");
+        Command::GraphicsDefaults => {
+            let defaults = client.get_graphics_defaults().await?;
+            println!("{defaults:#?}");
         }
-        Command::AppearanceDebug => {
-            let debug = client.get_board_editor_appearance_settings_debug().await?;
-            println!("{debug}");
+        Command::Appearance => {
+            let appearance = client.get_board_editor_appearance_settings().await?;
+            println!("{appearance:#?}");
         }
-        Command::NetClassDebug => {
+        Command::NetClass => {
             let nets = client.get_nets().await?;
-            let debug = client.get_netclass_for_nets_debug(nets).await?;
-            println!("{debug}");
+            let netclasses = client.get_netclass_for_nets(nets).await?;
+            println!("{netclasses:#?}");
         }
         Command::BoardReadReport { output } => {
             let report = build_board_read_report_markdown(&client).await?;
@@ -837,10 +847,10 @@ fn parse_args() -> Result<(CliConfig, Command), KiCadError> {
         "title-block" => Command::TitleBlock,
         "board-as-string" => Command::BoardAsString,
         "selection-as-string" => Command::SelectionAsString,
-        "stackup-debug" => Command::StackupDebug,
-        "graphics-defaults-debug" => Command::GraphicsDefaultsDebug,
-        "appearance-debug" => Command::AppearanceDebug,
-        "netclass-debug" => Command::NetClassDebug,
+        "stackup" => Command::Stackup,
+        "graphics-defaults" => Command::GraphicsDefaults,
+        "appearance" => Command::Appearance,
+        "netclass" => Command::NetClass,
         "proto-coverage-board-read" => Command::ProtoCoverageBoardRead,
         "board-read-report" => {
             let mut output = PathBuf::from("docs/BOARD_READ_REPORT.md");
@@ -896,7 +906,7 @@ fn default_config() -> CliConfig {
 
 fn print_help() {
     println!(
-        "kicad-ipc-cli\n\nUSAGE:\n  cargo run --bin kicad-ipc-cli -- [--socket URI] [--token TOKEN] [--timeout-ms N] <command> [command options]\n\nCOMMANDS:\n  ping                         Check IPC connectivity\n  version                      Fetch KiCad version\n  open-docs [--type <type>]    List open docs (default type: pcb)\n  project-path                 Get current project path from open PCB docs\n  board-open                   Exit non-zero if no PCB doc is open\n  nets                         List board nets (requires one open PCB)\n  netlist-pads                 Emit pad-level netlist data (with footprint context)\n  items-by-id --id <uuid> ...  Show parsed details for specific item IDs\n  item-bbox --id <uuid> ...    Show bounding boxes for item IDs\n  hit-test --id <uuid> --x-nm <x> --y-nm <y> [--tolerance-nm <n>]\n                               Hit-test one item at a point\n  types-pcb                    List PCB KiCad object type IDs from proto enum\n  items-raw --type-id <id> ... Dump raw Any payloads for requested item type IDs\n  items-raw-all-pcb [--debug]  Dump all PCB item payloads across all PCB object types\n  pad-shape-polygon --pad-id <uuid> ... --layer-id <i32> [--debug]\n                               Dump pad polygons on a target layer\n  padstack-presence --item-id <uuid> ... --layer-id <i32> ... [--debug]\n                               Check padstack shape presence matrix across layers\n  title-block                  Show title block fields\n  board-as-string              Dump board as KiCad s-expression text\n  selection-as-string          Dump current selection as KiCad s-expression text\n  stackup-debug                Dump raw stackup response\n  graphics-defaults-debug      Dump raw graphics defaults response\n  appearance-debug             Dump raw editor appearance settings response\n  netclass-debug               Dump raw netclass map for current board nets\n  proto-coverage-board-read    Print board-read command coverage vs proto\n  board-read-report [--out P]  Write markdown board reconstruction report\n  enabled-layers               List enabled board layers\n  active-layer                 Show active board layer\n  visible-layers               Show currently visible board layers\n  board-origin [--type <t>]    Show board origin (`grid` default, or `drill`)\n  selection-summary            Show current selection item type counts\n  selection-details            Show parsed details for selected items\n  selection-raw                Show raw Any payload bytes for selected items\n  smoke                        ping + version + board-open summary\n  help                         Show help\n\nTYPES:\n  schematic | symbol | pcb | footprint | drawing-sheet | project\n"
+        "kicad-ipc-cli\n\nUSAGE:\n  cargo run --bin kicad-ipc-cli -- [--socket URI] [--token TOKEN] [--timeout-ms N] <command> [command options]\n\nCOMMANDS:\n  ping                         Check IPC connectivity\n  version                      Fetch KiCad version\n  open-docs [--type <type>]    List open docs (default type: pcb)\n  project-path                 Get current project path from open PCB docs\n  board-open                   Exit non-zero if no PCB doc is open\n  nets                         List board nets (requires one open PCB)\n  netlist-pads                 Emit pad-level netlist data (with footprint context)\n  items-by-id --id <uuid> ...  Show parsed details for specific item IDs\n  item-bbox --id <uuid> ...    Show bounding boxes for item IDs\n  hit-test --id <uuid> --x-nm <x> --y-nm <y> [--tolerance-nm <n>]\n                               Hit-test one item at a point\n  types-pcb                    List PCB KiCad object type IDs from proto enum\n  items-raw --type-id <id> ... Dump raw Any payloads for requested item type IDs\n  items-raw-all-pcb [--debug]  Dump all PCB item payloads across all PCB object types\n  pad-shape-polygon --pad-id <uuid> ... --layer-id <i32> [--debug]\n                               Dump pad polygons on a target layer\n  padstack-presence --item-id <uuid> ... --layer-id <i32> ... [--debug]\n                               Check padstack shape presence matrix across layers\n  title-block                  Show title block fields\n  board-as-string              Dump board as KiCad s-expression text\n  selection-as-string          Dump current selection as KiCad s-expression text\n  stackup                      Show typed board stackup\n  graphics-defaults            Show typed graphics defaults\n  appearance                   Show typed editor appearance settings\n  netclass                     Show typed netclass map for current board nets\n  proto-coverage-board-read    Print board-read command coverage vs proto\n  board-read-report [--out P]  Write markdown board reconstruction report\n  enabled-layers               List enabled board layers\n  active-layer                 Show active board layer\n  visible-layers               Show currently visible board layers\n  board-origin [--type <t>]    Show board origin (`grid` default, or `drill`)\n  selection-summary            Show current selection item type counts\n  selection-details            Show parsed details for selected items\n  selection-raw                Show raw Any payload bytes for selected items\n  smoke                        ping + version + board-open summary\n  help                         Show help\n\nTYPES:\n  schematic | symbol | pcb | footprint | drawing-sheet | project\n"
     );
 }
 
@@ -1038,7 +1048,7 @@ async fn build_board_read_report_markdown(client: &KiCadClient) -> Result<String
         presence_rows.len()
     ));
     for row in &presence_rows {
-        if row.presence == "PSP_PRESENT" {
+        if row.presence == PadstackPresenceState::Present {
             present_pad_ids_by_layer
                 .entry(row.layer_id)
                 .or_default()
@@ -1104,7 +1114,7 @@ async fn build_board_read_report_markdown(client: &KiCadClient) -> Result<String
         out.push('\n');
     }
 
-    out.push_str("## Board/Editor Raw Structures\n\n");
+    out.push_str("## Board/Editor Structures\n\n");
     out.push_str("### Title Block\n\n");
     let title_block = client.get_title_block_info().await?;
     out.push_str(&format!("- title: {}\n", title_block.title));
@@ -1116,20 +1126,28 @@ async fn build_board_read_report_markdown(client: &KiCadClient) -> Result<String
     }
     out.push('\n');
 
-    out.push_str("### Stackup (Raw Debug)\n\n```text\n");
-    out.push_str(&client.get_board_stackup_debug().await?);
+    out.push_str("### Stackup\n\n```text\n");
+    out.push_str(&format!("{:#?}", client.get_board_stackup().await?));
     out.push_str("\n```\n\n");
 
-    out.push_str("### Graphics Defaults (Raw Debug)\n\n```text\n");
-    out.push_str(&client.get_graphics_defaults_debug().await?);
+    out.push_str("### Graphics Defaults\n\n```text\n");
+    out.push_str(&format!("{:#?}", client.get_graphics_defaults().await?));
     out.push_str("\n```\n\n");
 
-    out.push_str("### Editor Appearance (Raw Debug)\n\n```text\n");
-    out.push_str(&client.get_board_editor_appearance_settings_debug().await?);
+    out.push_str("### Editor Appearance\n\n```text\n");
+    out.push_str(&format!(
+        "{:#?}",
+        client.get_board_editor_appearance_settings().await?
+    ));
     out.push_str("\n```\n\n");
 
-    out.push_str("### NetClass Map (Raw Debug)\n\n```text\n");
-    out.push_str(&client.get_netclass_for_nets_debug(nets).await?);
+    out.push_str("### NetClass Map\n\n```text\n");
+    out.push_str(&format!(
+        "{:#?}",
+        client
+            .get_netclass_for_nets(client.get_nets().await?)
+            .await?
+    ));
     out.push_str("\n```\n\n");
 
     out.push_str("## PCB Item Coverage (All KOT_PCB_* Types)\n\n");
@@ -1228,7 +1246,7 @@ fn proto_coverage_board_read_rows() -> Vec<(&'static str, &'static str, &'static
         (
             "kiapi.board.commands.GetBoardStackup",
             "implemented",
-            "get_board_stackup_debug",
+            "get_board_stackup_raw/get_board_stackup",
         ),
         (
             "kiapi.board.commands.GetBoardEnabledLayers",
@@ -1238,7 +1256,7 @@ fn proto_coverage_board_read_rows() -> Vec<(&'static str, &'static str, &'static
         (
             "kiapi.board.commands.GetGraphicsDefaults",
             "implemented",
-            "get_graphics_defaults_debug",
+            "get_graphics_defaults_raw/get_graphics_defaults",
         ),
         (
             "kiapi.board.commands.GetBoardOrigin",
@@ -1259,17 +1277,17 @@ fn proto_coverage_board_read_rows() -> Vec<(&'static str, &'static str, &'static
         (
             "kiapi.board.commands.GetNetClassForNets",
             "implemented",
-            "get_netclass_for_nets_debug",
+            "get_netclass_for_nets_raw/get_netclass_for_nets",
         ),
         (
             "kiapi.board.commands.GetPadShapeAsPolygon",
             "implemented",
-            "get_pad_shape_as_polygon/get_pad_shape_as_polygon_debug",
+            "get_pad_shape_as_polygon_raw/get_pad_shape_as_polygon",
         ),
         (
             "kiapi.board.commands.CheckPadstackPresenceOnLayers",
             "implemented",
-            "check_padstack_presence_on_layers/check_padstack_presence_on_layers_debug",
+            "check_padstack_presence_on_layers_raw/check_padstack_presence_on_layers",
         ),
         (
             "kiapi.board.commands.GetVisibleLayers",
@@ -1284,7 +1302,7 @@ fn proto_coverage_board_read_rows() -> Vec<(&'static str, &'static str, &'static
         (
             "kiapi.board.commands.GetBoardEditorAppearanceSettings",
             "implemented",
-            "get_board_editor_appearance_settings_debug",
+            "get_board_editor_appearance_settings_raw/get_board_editor_appearance_settings",
         ),
         (
             "kiapi.common.commands.GetOpenDocuments",

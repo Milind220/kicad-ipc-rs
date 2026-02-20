@@ -173,18 +173,18 @@ Dump title block fields:
 cargo run --bin kicad-ipc-cli -- title-block
 ```
 
-Dump stackup/graphics/appearance raw debug:
+Show typed stackup/graphics/appearance:
 
 ```bash
-cargo run --bin kicad-ipc-cli -- stackup-debug
-cargo run --bin kicad-ipc-cli -- graphics-defaults-debug
-cargo run --bin kicad-ipc-cli -- appearance-debug
+cargo run --bin kicad-ipc-cli -- stackup
+cargo run --bin kicad-ipc-cli -- graphics-defaults
+cargo run --bin kicad-ipc-cli -- appearance
 ```
 
-Dump netclass map raw debug:
+Show typed netclass map:
 
 ```bash
-cargo run --bin kicad-ipc-cli -- netclass-debug
+cargo run --bin kicad-ipc-cli -- netclass
 ```
 
 Print proto command coverage status (board read):

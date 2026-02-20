@@ -69,12 +69,12 @@ Legend:
 | `BeginCommit` | Not yet | - |
 | `EndCommit` | Not yet | - |
 | `CreateItems` | Not yet | - |
-| `GetItems` | Implemented | `KiCadClient::get_items_raw_by_type_codes`, `KiCadClient::get_items_details_by_type_codes`, `KiCadClient::get_all_pcb_items_raw`, `KiCadClient::get_all_pcb_items_details`, `KiCadClient::get_pad_netlist` |
-| `GetItemsById` | Implemented | `KiCadClient::get_items_by_id_raw`, `KiCadClient::get_items_by_id_details` |
+| `GetItems` | Implemented | `KiCadClient::get_items_raw_by_type_codes`, `KiCadClient::get_items_by_type_codes`, `KiCadClient::get_items_details_by_type_codes`, `KiCadClient::get_all_pcb_items_raw`, `KiCadClient::get_all_pcb_items`, `KiCadClient::get_all_pcb_items_details`, `KiCadClient::get_pad_netlist` |
+| `GetItemsById` | Implemented | `KiCadClient::get_items_by_id_raw`, `KiCadClient::get_items_by_id`, `KiCadClient::get_items_by_id_details` |
 | `UpdateItems` | Not yet | - |
 | `DeleteItems` | Not yet | - |
 | `GetBoundingBox` | Implemented | `KiCadClient::get_item_bounding_boxes` |
-| `GetSelection` | Implemented | `KiCadClient::get_selection_raw`, `KiCadClient::get_selection_summary`, `KiCadClient::get_selection_details` |
+| `GetSelection` | Implemented | `KiCadClient::get_selection_raw`, `KiCadClient::get_selection`, `KiCadClient::get_selection_summary`, `KiCadClient::get_selection_details` |
 | `AddToSelection` | Not yet | - |
 | `RemoveFromSelection` | Not yet | - |
 | `ClearSelection` | Not yet | - |
@@ -98,26 +98,26 @@ Legend:
 
 | KiCad Command | Status | Rust API |
 | --- | --- | --- |
-| `GetBoardStackup` | Implemented | `KiCadClient::get_board_stackup_debug` |
+| `GetBoardStackup` | Implemented | `KiCadClient::get_board_stackup_raw`, `KiCadClient::get_board_stackup` |
 | `UpdateBoardStackup` | Not yet | - |
 | `GetBoardEnabledLayers` | Implemented | `KiCadClient::get_board_enabled_layers` |
 | `SetBoardEnabledLayers` | Not yet | - |
-| `GetGraphicsDefaults` | Implemented | `KiCadClient::get_graphics_defaults_debug` |
+| `GetGraphicsDefaults` | Implemented | `KiCadClient::get_graphics_defaults_raw`, `KiCadClient::get_graphics_defaults` |
 | `GetBoardOrigin` | Implemented | `KiCadClient::get_board_origin` |
 | `SetBoardOrigin` | Not yet | - |
 | `GetNets` | Implemented | `KiCadClient::get_nets` |
-| `GetItemsByNet` | Implemented | `KiCadClient::get_items_by_net_raw` |
-| `GetItemsByNetClass` | Implemented | `KiCadClient::get_items_by_net_class_raw` |
-| `GetNetClassForNets` | Implemented | `KiCadClient::get_netclass_for_nets_debug` |
+| `GetItemsByNet` | Implemented | `KiCadClient::get_items_by_net_raw`, `KiCadClient::get_items_by_net` |
+| `GetItemsByNetClass` | Implemented | `KiCadClient::get_items_by_net_class_raw`, `KiCadClient::get_items_by_net_class` |
+| `GetNetClassForNets` | Implemented | `KiCadClient::get_netclass_for_nets_raw`, `KiCadClient::get_netclass_for_nets` |
 | `RefillZones` | Not yet | - |
-| `GetPadShapeAsPolygon` | Implemented | `KiCadClient::get_pad_shape_as_polygon`, `KiCadClient::get_pad_shape_as_polygon_debug` |
-| `CheckPadstackPresenceOnLayers` | Implemented | `KiCadClient::check_padstack_presence_on_layers`, `KiCadClient::check_padstack_presence_on_layers_debug` |
+| `GetPadShapeAsPolygon` | Implemented | `KiCadClient::get_pad_shape_as_polygon_raw`, `KiCadClient::get_pad_shape_as_polygon` |
+| `CheckPadstackPresenceOnLayers` | Implemented | `KiCadClient::check_padstack_presence_on_layers_raw`, `KiCadClient::check_padstack_presence_on_layers` |
 | `InjectDrcError` | Not yet | - |
 | `GetVisibleLayers` | Implemented | `KiCadClient::get_visible_layers` |
 | `SetVisibleLayers` | Not yet | - |
 | `GetActiveLayer` | Implemented | `KiCadClient::get_active_layer` |
 | `SetActiveLayer` | Not yet | - |
-| `GetBoardEditorAppearanceSettings` | Implemented | `KiCadClient::get_board_editor_appearance_settings_debug` |
+| `GetBoardEditorAppearanceSettings` | Implemented | `KiCadClient::get_board_editor_appearance_settings_raw`, `KiCadClient::get_board_editor_appearance_settings` |
 | `SetBoardEditorAppearanceSettings` | Not yet | - |
 | `InteractiveMoveItems` | Not yet | - |
 
