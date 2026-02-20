@@ -77,6 +77,7 @@ const CMD_CLEAR_SELECTION: &str = "kiapi.common.commands.ClearSelection";
 const CMD_BEGIN_COMMIT: &str = "kiapi.common.commands.BeginCommit";
 const CMD_END_COMMIT: &str = "kiapi.common.commands.EndCommit";
 const CMD_CREATE_ITEMS: &str = "kiapi.common.commands.CreateItems";
+const CMD_UPDATE_ITEMS: &str = "kiapi.common.commands.UpdateItems";
 const CMD_GET_ITEMS: &str = "kiapi.common.commands.GetItems";
 const CMD_GET_ITEMS_BY_ID: &str = "kiapi.common.commands.GetItemsById";
 const CMD_GET_BOUNDING_BOX: &str = "kiapi.common.commands.GetBoundingBox";
@@ -116,6 +117,7 @@ const RES_SELECTION_RESPONSE: &str = "kiapi.common.commands.SelectionResponse";
 const RES_BEGIN_COMMIT_RESPONSE: &str = "kiapi.common.commands.BeginCommitResponse";
 const RES_END_COMMIT_RESPONSE: &str = "kiapi.common.commands.EndCommitResponse";
 const RES_CREATE_ITEMS_RESPONSE: &str = "kiapi.common.commands.CreateItemsResponse";
+const RES_UPDATE_ITEMS_RESPONSE: &str = "kiapi.common.commands.UpdateItemsResponse";
 const RES_GET_ITEMS_RESPONSE: &str = "kiapi.common.commands.GetItemsResponse";
 const RES_GET_BOUNDING_BOX_RESPONSE: &str = "kiapi.common.commands.GetBoundingBoxResponse";
 const RES_HIT_TEST_RESPONSE: &str = "kiapi.common.commands.HitTestResponse";
@@ -652,6 +654,42 @@ impl KiCadClient {
                 ensure_item_status_ok(row.status)?;
                 row.item.ok_or_else(|| KiCadError::InvalidResponse {
                     reason: "CreateItemsResponse missing created item payload".to_string(),
+                })
+            })
+            .collect()
+    }
+
+    pub async fn update_items_raw(
+        &self,
+        items: Vec<prost_types::Any>,
+    ) -> Result<prost_types::Any, KiCadError> {
+        let command = common_commands::UpdateItems {
+            header: Some(self.current_board_item_header().await?),
+            items,
+        };
+
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_UPDATE_ITEMS))
+            .await?;
+        response_payload_as_any(response, RES_UPDATE_ITEMS_RESPONSE)
+    }
+
+    pub async fn update_items(
+        &self,
+        items: Vec<prost_types::Any>,
+    ) -> Result<Vec<prost_types::Any>, KiCadError> {
+        let payload = self.update_items_raw(items).await?;
+        let response: common_commands::UpdateItemsResponse =
+            decode_any(&payload, RES_UPDATE_ITEMS_RESPONSE)?;
+        ensure_item_request_ok(response.status)?;
+
+        response
+            .updated_items
+            .into_iter()
+            .map(|row| {
+                ensure_item_status_ok(row.status)?;
+                row.item.ok_or_else(|| KiCadError::InvalidResponse {
+                    reason: "UpdateItemsResponse missing updated item payload".to_string(),
                 })
             })
             .collect()
