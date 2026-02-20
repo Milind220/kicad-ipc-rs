@@ -1557,72 +1557,37 @@ fn format_group_selection_detail(group: board_types::Group) -> String {
 }
 
 fn any_to_pretty_debug(item: &prost_types::Any) -> Result<String, KiCadError> {
-    if item.type_url == envelope::type_url("kiapi.board.types.Track") {
-        let value = decode_any::<board_types::Track>(item, "kiapi.board.types.Track")?;
-        return Ok(format!("{:#?}", value));
+    macro_rules! debug_any {
+        ($(($url:literal, $ty:ty)),* $(,)?) => {
+            $(
+                if item.type_url == envelope::type_url($url) {
+                    let value = decode_any::<$ty>(item, $url)?;
+                    return Ok(format!("{:#?}", value));
+                }
+            )*
+        };
     }
 
-    if item.type_url == envelope::type_url("kiapi.board.types.Arc") {
-        let value = decode_any::<board_types::Arc>(item, "kiapi.board.types.Arc")?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.Via") {
-        let value = decode_any::<board_types::Via>(item, "kiapi.board.types.Via")?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.FootprintInstance") {
-        let value = decode_any::<board_types::FootprintInstance>(
-            item,
+    debug_any!(
+        ("kiapi.board.types.Track", board_types::Track),
+        ("kiapi.board.types.Arc", board_types::Arc),
+        ("kiapi.board.types.Via", board_types::Via),
+        (
             "kiapi.board.types.FootprintInstance",
-        )?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.Pad") {
-        let value = decode_any::<board_types::Pad>(item, "kiapi.board.types.Pad")?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.BoardGraphicShape") {
-        let value = decode_any::<board_types::BoardGraphicShape>(
-            item,
+            board_types::FootprintInstance
+        ),
+        ("kiapi.board.types.Pad", board_types::Pad),
+        (
             "kiapi.board.types.BoardGraphicShape",
-        )?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.BoardText") {
-        let value = decode_any::<board_types::BoardText>(item, "kiapi.board.types.BoardText")?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.BoardTextBox") {
-        let value =
-            decode_any::<board_types::BoardTextBox>(item, "kiapi.board.types.BoardTextBox")?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.Field") {
-        let value = decode_any::<board_types::Field>(item, "kiapi.board.types.Field")?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.Zone") {
-        let value = decode_any::<board_types::Zone>(item, "kiapi.board.types.Zone")?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.Dimension") {
-        let value = decode_any::<board_types::Dimension>(item, "kiapi.board.types.Dimension")?;
-        return Ok(format!("{:#?}", value));
-    }
-
-    if item.type_url == envelope::type_url("kiapi.board.types.Group") {
-        let value = decode_any::<board_types::Group>(item, "kiapi.board.types.Group")?;
-        return Ok(format!("{:#?}", value));
-    }
+            board_types::BoardGraphicShape
+        ),
+        ("kiapi.board.types.BoardText", board_types::BoardText),
+        ("kiapi.board.types.BoardTextBox", board_types::BoardTextBox),
+        ("kiapi.board.types.Field", board_types::Field),
+        ("kiapi.board.types.Zone", board_types::Zone),
+        ("kiapi.board.types.Dimension", board_types::Dimension),
+        ("kiapi.board.types.Group", board_types::Group),
+    );
 
     Ok(format!(
         "unparsed_any type_url={} raw_len={}",
