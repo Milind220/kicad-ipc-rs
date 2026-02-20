@@ -24,7 +24,7 @@ pub use crate::model::board::{
     ArcStartMidEndNm, BoardEditorAppearanceSettings, BoardEnabledLayers, BoardFlipMode,
     BoardLayerClass, BoardLayerGraphicsDefault, BoardLayerInfo, BoardNet, BoardOriginKind,
     BoardStackup, BoardStackupDielectricProperties, BoardStackupLayer, BoardStackupLayerType,
-    ColorRgba, GraphicsDefaults, InactiveLayerDisplayMode, NetClassBoardSettings,
+    ColorRgba, DrcSeverity, GraphicsDefaults, InactiveLayerDisplayMode, NetClassBoardSettings,
     NetClassForNetEntry, NetClassInfo, NetClassType, NetColorDisplayMode, PadNetEntry,
     PadShapeAsPolygonEntry, PadstackPresenceEntry, PadstackPresenceState, PcbArc,
     PcbBoardGraphicShape, PcbBoardText, PcbBoardTextBox, PcbDimension, PcbField, PcbFootprint,

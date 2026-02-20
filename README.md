@@ -41,9 +41,9 @@ Legend:
 | Common (base) | 6 | 4 | 67% |
 | Common editor/document | 23 | 12 | 52% |
 | Project manager | 5 | 3 | 60% |
-| Board editor (PCB) | 22 | 18 | 82% |
+| Board editor (PCB) | 22 | 19 | 86% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **37** | **66%** |
+| **Total** | **56** | **38** | **68%** |
 
 ### Common (base)
 
@@ -112,7 +112,7 @@ Legend:
 | `RefillZones` | Not yet | - |
 | `GetPadShapeAsPolygon` | Implemented | `KiCadClient::get_pad_shape_as_polygon_raw`, `KiCadClient::get_pad_shape_as_polygon` |
 | `CheckPadstackPresenceOnLayers` | Implemented | `KiCadClient::check_padstack_presence_on_layers_raw`, `KiCadClient::check_padstack_presence_on_layers` |
-| `InjectDrcError` | Not yet | - |
+| `InjectDrcError` | Implemented | `KiCadClient::inject_drc_error_raw`, `KiCadClient::inject_drc_error` |
 | `GetVisibleLayers` | Implemented | `KiCadClient::get_visible_layers` |
 | `SetVisibleLayers` | Implemented | `KiCadClient::set_visible_layers` |
 | `GetActiveLayer` | Implemented | `KiCadClient::get_active_layer` |

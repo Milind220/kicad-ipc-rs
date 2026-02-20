@@ -261,6 +261,12 @@ Set editor appearance:
 cargo run --bin kicad-ipc-cli -- set-appearance --inactive-layer-display hidden --net-color-display all --board-flip normal --ratsnest-display all-layers
 ```
 
+Inject DRC marker:
+
+```bash
+cargo run --bin kicad-ipc-cli -- inject-drc-error --severity error --message "API marker test" --x-nm 1000000 --y-nm 1000000
+```
+
 Show typed netclass map:
 
 ```bash

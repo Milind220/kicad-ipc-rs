@@ -9,7 +9,7 @@ use crate::model::board::{
     ArcStartMidEndNm, BoardEditorAppearanceSettings, BoardEnabledLayers, BoardFlipMode,
     BoardLayerClass, BoardLayerGraphicsDefault, BoardLayerInfo, BoardNet, BoardOriginKind,
     BoardStackup, BoardStackupDielectricProperties, BoardStackupLayer, BoardStackupLayerType,
-    ColorRgba, GraphicsDefaults, InactiveLayerDisplayMode, NetClassBoardSettings,
+    ColorRgba, DrcSeverity, GraphicsDefaults, InactiveLayerDisplayMode, NetClassBoardSettings,
     NetClassForNetEntry, NetClassInfo, NetClassType, NetColorDisplayMode, PadNetEntry,
     PadShapeAsPolygonEntry, PadstackPresenceEntry, PadstackPresenceState, PcbArc,
     PcbBoardGraphicShape, PcbBoardText, PcbBoardTextBox, PcbDimension, PcbField, PcbFootprint,
@@ -65,6 +65,7 @@ const CMD_GET_NETCLASS_FOR_NETS: &str = "kiapi.board.commands.GetNetClassForNets
 const CMD_GET_PAD_SHAPE_AS_POLYGON: &str = "kiapi.board.commands.GetPadShapeAsPolygon";
 const CMD_CHECK_PADSTACK_PRESENCE_ON_LAYERS: &str =
     "kiapi.board.commands.CheckPadstackPresenceOnLayers";
+const CMD_INJECT_DRC_ERROR: &str = "kiapi.board.commands.InjectDrcError";
 const CMD_GET_SELECTION: &str = "kiapi.common.commands.GetSelection";
 const CMD_BEGIN_COMMIT: &str = "kiapi.common.commands.BeginCommit";
 const CMD_END_COMMIT: &str = "kiapi.common.commands.EndCommit";
@@ -95,6 +96,7 @@ const RES_BOARD_EDITOR_APPEARANCE_SETTINGS: &str =
 const RES_NETCLASS_FOR_NETS_RESPONSE: &str = "kiapi.board.commands.NetClassForNetsResponse";
 const RES_PAD_SHAPE_AS_POLYGON_RESPONSE: &str = "kiapi.board.commands.PadShapeAsPolygonResponse";
 const RES_PADSTACK_PRESENCE_RESPONSE: &str = "kiapi.board.commands.PadstackPresenceResponse";
+const RES_INJECT_DRC_ERROR_RESPONSE: &str = "kiapi.board.commands.InjectDrcErrorResponse";
 const RES_VECTOR2: &str = "kiapi.common.types.Vector2";
 const RES_SELECTION_RESPONSE: &str = "kiapi.common.commands.SelectionResponse";
 const RES_BEGIN_COMMIT_RESPONSE: &str = "kiapi.common.commands.BeginCommitResponse";
@@ -1047,6 +1049,46 @@ impl KiCadClient {
         Ok(entries)
     }
 
+    pub async fn inject_drc_error_raw(
+        &self,
+        severity: DrcSeverity,
+        message: impl Into<String>,
+        position: Option<Vector2Nm>,
+        item_ids: Vec<String>,
+    ) -> Result<prost_types::Any, KiCadError> {
+        let board = self.current_board_document_proto().await?;
+        let command = board_commands::InjectDrcError {
+            board: Some(board),
+            severity: drc_severity_to_proto(severity),
+            message: message.into(),
+            position: position.map(vector2_nm_to_proto),
+            items: item_ids
+                .into_iter()
+                .map(|value| common_types::Kiid { value })
+                .collect(),
+        };
+
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_INJECT_DRC_ERROR))
+            .await?;
+        response_payload_as_any(response, RES_INJECT_DRC_ERROR_RESPONSE)
+    }
+
+    pub async fn inject_drc_error(
+        &self,
+        severity: DrcSeverity,
+        message: impl Into<String>,
+        position: Option<Vector2Nm>,
+        item_ids: Vec<String>,
+    ) -> Result<Option<String>, KiCadError> {
+        let payload = self
+            .inject_drc_error_raw(severity, message, position, item_ids)
+            .await?;
+        let response: board_commands::InjectDrcErrorResponse =
+            decode_any(&payload, RES_INJECT_DRC_ERROR_RESPONSE)?;
+        Ok(response.marker.map(|marker| marker.value))
+    }
+
     pub async fn get_board_stackup_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = board_commands::GetBoardStackup {
             board: Some(self.current_board_document_proto().await?),
@@ -1671,6 +1713,19 @@ fn board_origin_kind_to_proto(kind: BoardOriginKind) -> i32 {
     match kind {
         BoardOriginKind::Grid => board_commands::BoardOriginType::BotGrid as i32,
         BoardOriginKind::Drill => board_commands::BoardOriginType::BotDrill as i32,
+    }
+}
+
+fn drc_severity_to_proto(value: DrcSeverity) -> i32 {
+    match value {
+        DrcSeverity::Warning => board_commands::DrcSeverity::DrsWarning as i32,
+        DrcSeverity::Error => board_commands::DrcSeverity::DrsError as i32,
+        DrcSeverity::Exclusion => board_commands::DrcSeverity::DrsExclusion as i32,
+        DrcSeverity::Ignore => board_commands::DrcSeverity::DrsIgnore as i32,
+        DrcSeverity::Info => board_commands::DrcSeverity::DrsInfo as i32,
+        DrcSeverity::Action => board_commands::DrcSeverity::DrsAction as i32,
+        DrcSeverity::Debug => board_commands::DrcSeverity::DrsDebug as i32,
+        DrcSeverity::Undefined => board_commands::DrcSeverity::DrsUndefined as i32,
     }
 }
 
@@ -2854,12 +2909,12 @@ fn default_client_name() -> String {
 mod tests {
     use super::{
         any_to_pretty_debug, board_editor_appearance_settings_to_proto, commit_action_to_proto,
-        ensure_item_request_ok, layer_to_model, map_commit_session, map_hit_test_result,
-        map_item_bounding_boxes, map_polygon_with_holes, model_document_to_proto,
-        normalize_socket_uri, pad_netlist_from_footprint_items, response_payload_as_any,
-        select_single_board_document, select_single_project_path, selection_item_detail,
-        summarize_item_details, summarize_selection, text_horizontal_alignment_to_proto,
-        text_spec_to_proto, PCB_OBJECT_TYPES,
+        drc_severity_to_proto, ensure_item_request_ok, layer_to_model, map_commit_session,
+        map_hit_test_result, map_item_bounding_boxes, map_polygon_with_holes,
+        model_document_to_proto, normalize_socket_uri, pad_netlist_from_footprint_items,
+        response_payload_as_any, select_single_board_document, select_single_project_path,
+        selection_item_detail, summarize_item_details, summarize_selection,
+        text_horizontal_alignment_to_proto, text_spec_to_proto, PCB_OBJECT_TYPES,
     };
     use crate::error::KiCadError;
     use crate::model::common::{
@@ -3024,6 +3079,18 @@ mod tests {
         assert_eq!(
             commit_action_to_proto(CommitAction::Drop),
             crate::proto::kiapi::common::commands::CommitAction::CmaDrop as i32
+        );
+    }
+
+    #[test]
+    fn drc_severity_to_proto_maps_known_variants() {
+        assert_eq!(
+            drc_severity_to_proto(crate::model::board::DrcSeverity::Warning),
+            crate::proto::kiapi::board::commands::DrcSeverity::DrsWarning as i32
+        );
+        assert_eq!(
+            drc_severity_to_proto(crate::model::board::DrcSeverity::Error),
+            crate::proto::kiapi::board::commands::DrcSeverity::DrsError as i32
         );
     }
 
