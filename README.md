@@ -20,6 +20,17 @@ Early scaffold phase. Core architecture + step-by-step implementation plan:
 
 - CLI runbook: `/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rust/docs/TEST_CLI.md`
 
+## Runtime Compatibility Notes (Current Test Rig)
+
+- Last verified: 2026-02-20
+- KiCad version (`kicad-ipc-cli version`): `10.0.0 (10.0.0-rc1)`
+
+Commands wrapped in this crate but currently unhandled/unsupported by this KiCad build:
+
+| Command | Runtime status | Notes |
+| --- | --- | --- |
+| `RefreshEditor` | `AS_UNHANDLED` | KiCad responds `no handler available for request of type kiapi.common.commands.RefreshEditor`. |
+
 ## KiCad v10 RC1.1 API Completion Matrix
 
 Source of truth for this matrix:
