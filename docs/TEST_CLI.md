@@ -341,6 +341,7 @@ Show typed stackup/graphics/appearance:
 
 ```bash
 cargo run --bin kicad-ipc-cli -- stackup
+cargo run --bin kicad-ipc-cli -- update-stackup
 cargo run --bin kicad-ipc-cli -- graphics-defaults
 cargo run --bin kicad-ipc-cli -- appearance
 ```

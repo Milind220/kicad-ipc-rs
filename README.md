@@ -45,6 +45,7 @@ Deferred manual/runtime verification (implemented after 2026-02-20 while user un
 - `ParseAndCreateItemsFromString`
 - `SetNetClasses`
 - `SetTextVariables`
+- `UpdateBoardStackup`
 
 ## KiCad v10 RC1.1 API Completion Matrix
 
@@ -67,9 +68,9 @@ Legend:
 | Common (base) | 6 | 6 | 100% |
 | Common editor/document | 23 | 23 | 100% |
 | Project manager | 5 | 5 | 100% |
-| Board editor (PCB) | 22 | 20 | 91% |
+| Board editor (PCB) | 22 | 21 | 95% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **54** | **96%** |
+| **Total** | **56** | **55** | **98%** |
 
 ### Common (base)
 
@@ -125,7 +126,7 @@ Legend:
 | KiCad Command | Status | Rust API |
 | --- | --- | --- |
 | `GetBoardStackup` | Implemented | `KiCadClient::get_board_stackup_raw`, `KiCadClient::get_board_stackup` |
-| `UpdateBoardStackup` | Not yet | - |
+| `UpdateBoardStackup` | Implemented | `KiCadClient::update_board_stackup_raw`, `KiCadClient::update_board_stackup` |
 | `GetBoardEnabledLayers` | Implemented | `KiCadClient::get_board_enabled_layers` |
 | `SetBoardEnabledLayers` | Implemented | `KiCadClient::set_board_enabled_layers` |
 | `GetGraphicsDefaults` | Implemented | `KiCadClient::get_graphics_defaults_raw`, `KiCadClient::get_graphics_defaults` |

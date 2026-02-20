@@ -59,6 +59,7 @@ const CMD_SET_VISIBLE_LAYERS: &str = "kiapi.board.commands.SetVisibleLayers";
 const CMD_GET_BOARD_ORIGIN: &str = "kiapi.board.commands.GetBoardOrigin";
 const CMD_SET_BOARD_ORIGIN: &str = "kiapi.board.commands.SetBoardOrigin";
 const CMD_GET_BOARD_STACKUP: &str = "kiapi.board.commands.GetBoardStackup";
+const CMD_UPDATE_BOARD_STACKUP: &str = "kiapi.board.commands.UpdateBoardStackup";
 const CMD_GET_GRAPHICS_DEFAULTS: &str = "kiapi.board.commands.GetGraphicsDefaults";
 const CMD_GET_BOARD_EDITOR_APPEARANCE_SETTINGS: &str =
     "kiapi.board.commands.GetBoardEditorAppearanceSettings";
@@ -1524,6 +1525,32 @@ impl KiCadClient {
         Ok(map_board_stackup(response.stackup.unwrap_or_default()))
     }
 
+    pub async fn update_board_stackup_raw(
+        &self,
+        stackup: BoardStackup,
+    ) -> Result<prost_types::Any, KiCadError> {
+        let command = board_commands::UpdateBoardStackup {
+            board: Some(self.current_board_document_proto().await?),
+            stackup: Some(board_stackup_to_proto(stackup)),
+        };
+
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_UPDATE_BOARD_STACKUP))
+            .await?;
+
+        response_payload_as_any(response, RES_BOARD_STACKUP_RESPONSE)
+    }
+
+    pub async fn update_board_stackup(
+        &self,
+        stackup: BoardStackup,
+    ) -> Result<BoardStackup, KiCadError> {
+        let payload = self.update_board_stackup_raw(stackup).await?;
+        let response: board_commands::BoardStackupResponse =
+            decode_any(&payload, RES_BOARD_STACKUP_RESPONSE)?;
+        Ok(map_board_stackup(response.stackup.unwrap_or_default()))
+    }
+
     pub async fn get_graphics_defaults_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = board_commands::GetGraphicsDefaults {
             board: Some(self.current_board_document_proto().await?),
@@ -2510,6 +2537,28 @@ fn map_board_stackup_layer_type(value: i32) -> BoardStackupLayerType {
     }
 }
 
+fn board_stackup_layer_type_to_proto(value: BoardStackupLayerType) -> i32 {
+    match value {
+        BoardStackupLayerType::Copper => board_proto::BoardStackupLayerType::BsltCopper as i32,
+        BoardStackupLayerType::Dielectric => {
+            board_proto::BoardStackupLayerType::BsltDielectric as i32
+        }
+        BoardStackupLayerType::Silkscreen => {
+            board_proto::BoardStackupLayerType::BsltSilkscreen as i32
+        }
+        BoardStackupLayerType::SolderMask => {
+            board_proto::BoardStackupLayerType::BsltSoldermask as i32
+        }
+        BoardStackupLayerType::SolderPaste => {
+            board_proto::BoardStackupLayerType::BsltSolderpaste as i32
+        }
+        BoardStackupLayerType::Undefined => {
+            board_proto::BoardStackupLayerType::BsltUndefined as i32
+        }
+        BoardStackupLayerType::Unknown(value) => value,
+    }
+}
+
 fn map_board_layer_class(value: i32) -> BoardLayerClass {
     match board_proto::BoardLayerClass::try_from(value) {
         Ok(board_proto::BoardLayerClass::BlcSilkscreen) => BoardLayerClass::Silkscreen,
@@ -2616,6 +2665,7 @@ fn map_board_stackup(stackup: board_proto::BoardStackup) -> BoardStackup {
         .map(|impedance| impedance.is_controlled)
         .unwrap_or(false);
     let edge = stackup.edge.unwrap_or_default();
+    let edge_has_connector = edge.connector.is_some();
     let edge_has_castellated_pads = edge
         .castellation
         .map(|value| value.has_castellated_pads)
@@ -2654,9 +2704,72 @@ fn map_board_stackup(stackup: board_proto::BoardStackup) -> BoardStackup {
     BoardStackup {
         finish_type_name,
         impedance_controlled,
+        edge_has_connector,
         edge_has_castellated_pads,
         edge_has_edge_plating,
         layers,
+    }
+}
+
+fn board_stackup_to_proto(stackup: BoardStackup) -> board_proto::BoardStackup {
+    board_proto::BoardStackup {
+        finish: (!stackup.finish_type_name.is_empty()).then_some(board_proto::BoardFinish {
+            type_name: stackup.finish_type_name,
+        }),
+        impedance: Some(board_proto::BoardImpedanceControl {
+            is_controlled: stackup.impedance_controlled,
+        }),
+        edge: Some(board_proto::BoardEdgeSettings {
+            connector: stackup
+                .edge_has_connector
+                .then_some(board_proto::BoardEdgeConnector {}),
+            castellation: Some(board_proto::Castellation {
+                has_castellated_pads: stackup.edge_has_castellated_pads,
+            }),
+            plating: Some(board_proto::EdgePlating {
+                has_edge_plating: stackup.edge_has_edge_plating,
+            }),
+        }),
+        layers: stackup
+            .layers
+            .into_iter()
+            .map(board_stackup_layer_to_proto)
+            .collect(),
+    }
+}
+
+fn board_stackup_layer_to_proto(layer: BoardStackupLayer) -> board_proto::BoardStackupLayer {
+    board_proto::BoardStackupLayer {
+        thickness: layer
+            .thickness_nm
+            .map(|value_nm| common_types::Distance { value_nm }),
+        layer: layer.layer.id,
+        enabled: layer.enabled,
+        r#type: board_stackup_layer_type_to_proto(layer.layer_type),
+        dielectric: (!layer.dielectric_layers.is_empty()).then(|| {
+            board_proto::BoardStackupDielectricLayer {
+                layer: layer
+                    .dielectric_layers
+                    .into_iter()
+                    .map(|dielectric| board_proto::BoardStackupDielectricProperties {
+                        epsilon_r: dielectric.epsilon_r,
+                        loss_tangent: dielectric.loss_tangent,
+                        material_name: dielectric.material_name,
+                        thickness: dielectric
+                            .thickness_nm
+                            .map(|value_nm| common_types::Distance { value_nm }),
+                    })
+                    .collect(),
+            }
+        }),
+        color: layer.color.map(|color| common_types::Color {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+            a: color.a,
+        }),
+        material_name: layer.material_name,
+        user_name: layer.user_name,
     }
 }
 
@@ -3495,17 +3608,20 @@ fn default_client_name() -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        any_to_pretty_debug, board_editor_appearance_settings_to_proto, commit_action_to_proto,
-        drc_severity_to_proto, ensure_item_deletion_status_ok, ensure_item_request_ok,
-        ensure_item_status_ok, layer_to_model, map_commit_session, map_hit_test_result,
-        map_item_bounding_boxes, map_merge_mode_to_proto, map_polygon_with_holes,
-        map_run_action_status, model_document_to_proto, normalize_socket_uri,
-        pad_netlist_from_footprint_items, response_payload_as_any, select_single_board_document,
-        select_single_project_path, selection_item_detail, summarize_item_details,
-        summarize_selection, text_horizontal_alignment_to_proto, text_spec_to_proto,
-        PCB_OBJECT_TYPES,
+        any_to_pretty_debug, board_editor_appearance_settings_to_proto, board_stackup_to_proto,
+        commit_action_to_proto, drc_severity_to_proto, ensure_item_deletion_status_ok,
+        ensure_item_request_ok, ensure_item_status_ok, layer_to_model, map_board_stackup,
+        map_commit_session, map_hit_test_result, map_item_bounding_boxes, map_merge_mode_to_proto,
+        map_polygon_with_holes, map_run_action_status, model_document_to_proto,
+        normalize_socket_uri, pad_netlist_from_footprint_items, response_payload_as_any,
+        select_single_board_document, select_single_project_path, selection_item_detail,
+        summarize_item_details, summarize_selection, text_horizontal_alignment_to_proto,
+        text_spec_to_proto, PCB_OBJECT_TYPES,
     };
     use crate::error::KiCadError;
+    use crate::model::board::{
+        BoardLayerInfo, BoardStackup, BoardStackupLayer, BoardStackupLayerType,
+    };
     use crate::model::common::{
         CommitAction, DocumentSpecifier, DocumentType, ProjectInfo, TextAttributesSpec,
         TextHorizontalAlignment, TextSpec,
@@ -3721,6 +3837,122 @@ mod tests {
         assert_eq!(
             proto.ratsnest_display,
             crate::proto::kiapi::board::commands::RatsnestDisplayMode::RdmVisibleLayers as i32
+        );
+    }
+
+    #[test]
+    fn map_board_stackup_defaults_missing_optional_messages() {
+        let mapped = map_board_stackup(crate::proto::kiapi::board::BoardStackup::default());
+        assert_eq!(mapped.finish_type_name, "");
+        assert!(!mapped.impedance_controlled);
+        assert!(!mapped.edge_has_connector);
+        assert!(!mapped.edge_has_castellated_pads);
+        assert!(!mapped.edge_has_edge_plating);
+        assert!(mapped.layers.is_empty());
+    }
+
+    #[test]
+    fn map_board_stackup_maps_unknown_layer_type_enum() {
+        let mapped = map_board_stackup(crate::proto::kiapi::board::BoardStackup {
+            finish: None,
+            impedance: None,
+            edge: None,
+            layers: vec![crate::proto::kiapi::board::BoardStackupLayer {
+                thickness: None,
+                layer: crate::proto::kiapi::board::types::BoardLayer::BlFCu as i32,
+                enabled: true,
+                r#type: 777,
+                dielectric: None,
+                color: None,
+                material_name: String::new(),
+                user_name: String::new(),
+            }],
+        });
+        assert!(matches!(
+            mapped.layers.first().map(|layer| layer.layer_type),
+            Some(BoardStackupLayerType::Unknown(777))
+        ));
+    }
+
+    #[test]
+    fn board_stackup_to_proto_maps_unknown_layer_type_and_missing_nested_messages() {
+        let proto = board_stackup_to_proto(BoardStackup {
+            finish_type_name: String::new(),
+            impedance_controlled: false,
+            edge_has_connector: false,
+            edge_has_castellated_pads: false,
+            edge_has_edge_plating: false,
+            layers: vec![BoardStackupLayer {
+                layer: BoardLayerInfo {
+                    id: crate::proto::kiapi::board::types::BoardLayer::BlFCu as i32,
+                    name: "BL_F_Cu".to_string(),
+                },
+                user_name: "F.Cu".to_string(),
+                material_name: "Copper".to_string(),
+                enabled: true,
+                thickness_nm: None,
+                layer_type: BoardStackupLayerType::Unknown(321),
+                color: None,
+                dielectric_layers: Vec::new(),
+            }],
+        });
+
+        assert!(proto.finish.is_none());
+        assert_eq!(
+            proto
+                .impedance
+                .expect("impedance should always be present")
+                .is_controlled,
+            false
+        );
+        let edge = proto.edge.expect("edge should always be present");
+        assert!(edge.connector.is_none());
+        assert_eq!(
+            edge.castellation
+                .expect("castellation should be present")
+                .has_castellated_pads,
+            false
+        );
+        assert_eq!(
+            edge.plating
+                .expect("plating should be present")
+                .has_edge_plating,
+            false
+        );
+        let layer = proto.layers.first().expect("one layer should be present");
+        assert!(layer.thickness.is_none());
+        assert_eq!(layer.r#type, 321);
+        assert!(layer.dielectric.is_none());
+        assert!(layer.color.is_none());
+    }
+
+    #[test]
+    fn board_stackup_to_proto_preserves_edge_connector_presence() {
+        let proto = board_stackup_to_proto(BoardStackup {
+            finish_type_name: "ENIG".to_string(),
+            impedance_controlled: true,
+            edge_has_connector: true,
+            edge_has_castellated_pads: true,
+            edge_has_edge_plating: true,
+            layers: Vec::new(),
+        });
+        assert_eq!(
+            proto.finish.expect("finish should be present").type_name,
+            "ENIG"
+        );
+        let edge = proto.edge.expect("edge should be present");
+        assert!(edge.connector.is_some());
+        assert_eq!(
+            edge.castellation
+                .expect("castellation should be present")
+                .has_castellated_pads,
+            true
+        );
+        assert_eq!(
+            edge.plating
+                .expect("plating should be present")
+                .has_edge_plating,
+            true
         );
     }
 

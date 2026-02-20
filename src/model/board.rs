@@ -164,6 +164,7 @@ pub struct BoardStackupLayer {
 pub struct BoardStackup {
     pub finish_type_name: String,
     pub impedance_controlled: bool,
+    pub edge_has_connector: bool,
     pub edge_has_castellated_pads: bool,
     pub edge_has_edge_plating: bool,
     pub layers: Vec<BoardStackupLayer>,
