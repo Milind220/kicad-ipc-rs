@@ -41,9 +41,9 @@ Legend:
 | Common (base) | 6 | 4 | 67% |
 | Common editor/document | 23 | 12 | 52% |
 | Project manager | 5 | 3 | 60% |
-| Board editor (PCB) | 22 | 15 | 68% |
+| Board editor (PCB) | 22 | 16 | 73% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **34** | **61%** |
+| **Total** | **56** | **35** | **63%** |
 
 ### Common (base)
 
@@ -104,7 +104,7 @@ Legend:
 | `SetBoardEnabledLayers` | Not yet | - |
 | `GetGraphicsDefaults` | Implemented | `KiCadClient::get_graphics_defaults_raw`, `KiCadClient::get_graphics_defaults` |
 | `GetBoardOrigin` | Implemented | `KiCadClient::get_board_origin` |
-| `SetBoardOrigin` | Not yet | - |
+| `SetBoardOrigin` | Implemented | `KiCadClient::set_board_origin` |
 | `GetNets` | Implemented | `KiCadClient::get_nets` |
 | `GetItemsByNet` | Implemented | `KiCadClient::get_items_by_net_raw`, `KiCadClient::get_items_by_net` |
 | `GetItemsByNetClass` | Implemented | `KiCadClient::get_items_by_net_class_raw`, `KiCadClient::get_items_by_net_class` |

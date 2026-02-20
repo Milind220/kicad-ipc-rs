@@ -119,6 +119,12 @@ Show drill origin:
 cargo run --bin kicad-ipc-cli -- board-origin --type drill
 ```
 
+Set board origin:
+
+```bash
+cargo run --bin kicad-ipc-cli -- set-board-origin --type grid --x-nm 1000000 --y-nm 2000000
+```
+
 Refresh PCB editor:
 
 ```bash

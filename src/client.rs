@@ -51,6 +51,7 @@ const CMD_SET_ACTIVE_LAYER: &str = "kiapi.board.commands.SetActiveLayer";
 const CMD_GET_VISIBLE_LAYERS: &str = "kiapi.board.commands.GetVisibleLayers";
 const CMD_SET_VISIBLE_LAYERS: &str = "kiapi.board.commands.SetVisibleLayers";
 const CMD_GET_BOARD_ORIGIN: &str = "kiapi.board.commands.GetBoardOrigin";
+const CMD_SET_BOARD_ORIGIN: &str = "kiapi.board.commands.SetBoardOrigin";
 const CMD_GET_BOARD_STACKUP: &str = "kiapi.board.commands.GetBoardStackup";
 const CMD_GET_GRAPHICS_DEFAULTS: &str = "kiapi.board.commands.GetGraphicsDefaults";
 const CMD_GET_BOARD_EDITOR_APPEARANCE_SETTINGS: &str =
@@ -637,6 +638,23 @@ impl KiCadClient {
             x_nm: payload.x_nm,
             y_nm: payload.y_nm,
         })
+    }
+
+    pub async fn set_board_origin(
+        &self,
+        kind: BoardOriginKind,
+        origin: Vector2Nm,
+    ) -> Result<(), KiCadError> {
+        let board = self.current_board_document_proto().await?;
+        let command = board_commands::SetBoardOrigin {
+            board: Some(board),
+            r#type: board_origin_kind_to_proto(kind),
+            origin: Some(vector2_nm_to_proto(origin)),
+        };
+
+        self.send_command(envelope::pack_any(&command, CMD_SET_BOARD_ORIGIN))
+            .await?;
+        Ok(())
     }
 
     pub async fn get_selection_summary(&self) -> Result<SelectionSummary, KiCadError> {

@@ -58,6 +58,11 @@ enum Command {
     BoardOrigin {
         kind: BoardOriginKind,
     },
+    SetBoardOrigin {
+        kind: BoardOriginKind,
+        x_nm: i64,
+        y_nm: i64,
+    },
     RefreshEditor {
         frame: EditorFrameType,
     },
@@ -336,6 +341,12 @@ async fn run() -> Result<(), KiCadError> {
                 "origin_kind={} x_nm={} y_nm={}",
                 kind, origin.x_nm, origin.y_nm
             );
+        }
+        Command::SetBoardOrigin { kind, x_nm, y_nm } => {
+            client
+                .set_board_origin(kind, Vector2Nm { x_nm, y_nm })
+                .await?;
+            println!("set_origin_kind={} x_nm={} y_nm={}", kind, x_nm, y_nm);
         }
         Command::RefreshEditor { frame } => {
             client.refresh_editor(frame).await?;
@@ -864,6 +875,54 @@ fn parse_args_from(mut args: Vec<String>) -> Result<(CliConfig, Command), KiCadE
             }
             Command::BoardOrigin { kind }
         }
+        "set-board-origin" => {
+            let mut kind = BoardOriginKind::Grid;
+            let mut x_nm = None;
+            let mut y_nm = None;
+            let mut i = 1;
+            while i < args.len() {
+                match args[i].as_str() {
+                    "--type" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for set-board-origin --type".to_string(),
+                        })?;
+                        kind = BoardOriginKind::from_str(value)
+                            .map_err(|err| KiCadError::Config { reason: err })?;
+                        i += 2;
+                    }
+                    "--x-nm" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for set-board-origin --x-nm".to_string(),
+                        })?;
+                        x_nm = Some(value.parse::<i64>().map_err(|err| KiCadError::Config {
+                            reason: format!("invalid set-board-origin --x-nm `{value}`: {err}"),
+                        })?);
+                        i += 2;
+                    }
+                    "--y-nm" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for set-board-origin --y-nm".to_string(),
+                        })?;
+                        y_nm = Some(value.parse::<i64>().map_err(|err| KiCadError::Config {
+                            reason: format!("invalid set-board-origin --y-nm `{value}`: {err}"),
+                        })?);
+                        i += 2;
+                    }
+                    _ => {
+                        i += 1;
+                    }
+                }
+            }
+            Command::SetBoardOrigin {
+                kind,
+                x_nm: x_nm.ok_or_else(|| KiCadError::Config {
+                    reason: "set-board-origin requires `--x-nm <i64>`".to_string(),
+                })?,
+                y_nm: y_nm.ok_or_else(|| KiCadError::Config {
+                    reason: "set-board-origin requires `--y-nm <i64>`".to_string(),
+                })?,
+            }
+        }
         "refresh-editor" => {
             let mut frame = EditorFrameType::PcbEditor;
             let mut i = 1;
@@ -1240,7 +1299,7 @@ fn default_config() -> CliConfig {
 
 fn print_help() {
     println!(
-        "kicad-ipc-cli\n\nUSAGE:\n  cargo run --bin kicad-ipc-cli -- [--socket URI] [--token TOKEN] [--client-name NAME] [--timeout-ms N] <command> [command options]\n\nCOMMANDS:\n  ping                         Check IPC connectivity\n  version                      Fetch KiCad version\n  open-docs [--type <type>]    List open docs (default type: pcb)\n  project-path                 Get current project path from open PCB docs\n  board-open                   Exit non-zero if no PCB doc is open\n  net-classes                  List project netclass definitions\n  text-variables               List text variables for current board document\n  expand-text-variables        Expand variables in provided text values\n                               Options: --text <value> (repeatable)\n  text-extents                 Measure text bounding box\n                               Options: --text <value>\n  text-as-shapes               Convert text to rendered shapes\n                               Options: --text <value> (repeatable)\n  nets                         List board nets (requires one open PCB)\n  netlist-pads                 Emit pad-level netlist data (with footprint context)\n  items-by-id --id <uuid> ...  Show parsed details for specific item IDs\n  item-bbox --id <uuid> ...    Show bounding boxes for item IDs\n  hit-test --id <uuid> --x-nm <x> --y-nm <y> [--tolerance-nm <n>]\n                               Hit-test one item at a point\n  types-pcb                    List PCB KiCad object type IDs from proto enum\n  items-raw --type-id <id> ... Dump raw Any payloads for requested item type IDs\n  items-raw-all-pcb [--debug]  Dump all PCB item payloads across all PCB object types\n  pad-shape-polygon --pad-id <uuid> ... --layer-id <i32> [--debug]\n                               Dump pad polygons on a target layer\n  padstack-presence --item-id <uuid> ... --layer-id <i32> ... [--debug]\n                               Check padstack shape presence matrix across layers\n  title-block                  Show title block fields\n  board-as-string              Dump board as KiCad s-expression text\n  selection-as-string          Dump current selection as KiCad s-expression text\n  stackup                      Show typed board stackup\n  graphics-defaults            Show typed graphics defaults\n  appearance                   Show typed editor appearance settings\n  netclass                     Show typed netclass map for current board nets\n  proto-coverage-board-read    Print board-read command coverage vs proto\n  board-read-report [--out P]  Write markdown board reconstruction report\n  enabled-layers               List enabled board layers\n  active-layer                 Show active board layer\n  set-active-layer --layer-id <i32>\n                               Set active board layer\n  visible-layers               Show currently visible board layers\n  set-visible-layers --layer-id <i32> ...\n                               Set visible board layers\n  board-origin [--type <t>]    Show board origin (`grid` default, or `drill`)\n  refresh-editor [--frame <f>] Refresh a specific editor frame (default: pcb)\n  begin-commit                 Start staged commit and print commit ID\n  end-commit --id <uuid> [--action <commit|drop>] [--message <text>]\n                               End staged commit with commit/drop action\n  selection-summary            Show current selection item type counts\n  selection-details            Show parsed details for selected items\n  selection-raw                Show raw Any payload bytes for selected items\n  smoke                        ping + version + board-open summary\n  help                         Show help\n\nTYPES:\n  schematic | symbol | pcb | footprint | drawing-sheet | project\n"
+        "kicad-ipc-cli\n\nUSAGE:\n  cargo run --bin kicad-ipc-cli -- [--socket URI] [--token TOKEN] [--client-name NAME] [--timeout-ms N] <command> [command options]\n\nCOMMANDS:\n  ping                         Check IPC connectivity\n  version                      Fetch KiCad version\n  open-docs [--type <type>]    List open docs (default type: pcb)\n  project-path                 Get current project path from open PCB docs\n  board-open                   Exit non-zero if no PCB doc is open\n  net-classes                  List project netclass definitions\n  text-variables               List text variables for current board document\n  expand-text-variables        Expand variables in provided text values\n                               Options: --text <value> (repeatable)\n  text-extents                 Measure text bounding box\n                               Options: --text <value>\n  text-as-shapes               Convert text to rendered shapes\n                               Options: --text <value> (repeatable)\n  nets                         List board nets (requires one open PCB)\n  netlist-pads                 Emit pad-level netlist data (with footprint context)\n  items-by-id --id <uuid> ...  Show parsed details for specific item IDs\n  item-bbox --id <uuid> ...    Show bounding boxes for item IDs\n  hit-test --id <uuid> --x-nm <x> --y-nm <y> [--tolerance-nm <n>]\n                               Hit-test one item at a point\n  types-pcb                    List PCB KiCad object type IDs from proto enum\n  items-raw --type-id <id> ... Dump raw Any payloads for requested item type IDs\n  items-raw-all-pcb [--debug]  Dump all PCB item payloads across all PCB object types\n  pad-shape-polygon --pad-id <uuid> ... --layer-id <i32> [--debug]\n                               Dump pad polygons on a target layer\n  padstack-presence --item-id <uuid> ... --layer-id <i32> ... [--debug]\n                               Check padstack shape presence matrix across layers\n  title-block                  Show title block fields\n  board-as-string              Dump board as KiCad s-expression text\n  selection-as-string          Dump current selection as KiCad s-expression text\n  stackup                      Show typed board stackup\n  graphics-defaults            Show typed graphics defaults\n  appearance                   Show typed editor appearance settings\n  netclass                     Show typed netclass map for current board nets\n  proto-coverage-board-read    Print board-read command coverage vs proto\n  board-read-report [--out P]  Write markdown board reconstruction report\n  enabled-layers               List enabled board layers\n  active-layer                 Show active board layer\n  set-active-layer --layer-id <i32>\n                               Set active board layer\n  visible-layers               Show currently visible board layers\n  set-visible-layers --layer-id <i32> ...\n                               Set visible board layers\n  board-origin [--type <t>]    Show board origin (`grid` default, or `drill`)\n  set-board-origin --type <t> --x-nm <i64> --y-nm <i64>\n                               Set board origin (`grid` or `drill`)\n  refresh-editor [--frame <f>] Refresh a specific editor frame (default: pcb)\n  begin-commit                 Start staged commit and print commit ID\n  end-commit --id <uuid> [--action <commit|drop>] [--message <text>]\n                               End staged commit with commit/drop action\n  selection-summary            Show current selection item type counts\n  selection-details            Show parsed details for selected items\n  selection-raw                Show raw Any payload bytes for selected items\n  smoke                        ping + version + board-open summary\n  help                         Show help\n\nTYPES:\n  schematic | symbol | pcb | footprint | drawing-sheet | project\n"
     );
 }
 
@@ -1793,7 +1852,7 @@ fn hex_char(value: u8) -> char {
 #[cfg(test)]
 mod tests {
     use super::{parse_args_from, Command};
-    use kicad_ipc::CommitAction;
+    use kicad_ipc::{BoardOriginKind, CommitAction};
 
     #[test]
     fn parse_args_accepts_client_name_for_commit_flow() {
@@ -1880,6 +1939,29 @@ mod tests {
 
         match command {
             Command::SetVisibleLayers { layer_ids } => assert_eq!(layer_ids, vec![3, 47]),
+            other => panic!("unexpected command variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_args_parses_set_board_origin() {
+        let (_, command) = parse_args_from(vec![
+            "set-board-origin".to_string(),
+            "--type".to_string(),
+            "drill".to_string(),
+            "--x-nm".to_string(),
+            "123".to_string(),
+            "--y-nm".to_string(),
+            "456".to_string(),
+        ])
+        .expect("set-board-origin args should parse");
+
+        match command {
+            Command::SetBoardOrigin { kind, x_nm, y_nm } => {
+                assert_eq!(kind, BoardOriginKind::Drill);
+                assert_eq!(x_nm, 123);
+                assert_eq!(y_nm, 456);
+            }
             other => panic!("unexpected command variant: {other:?}"),
         }
     }
