@@ -40,10 +40,10 @@ Legend:
 | --- | ---: | ---: | ---: |
 | Common (base) | 6 | 2 | 33% |
 | Common editor/document | 23 | 9 | 39% |
-| Project manager | 5 | 0 | 0% |
+| Project manager | 5 | 1 | 20% |
 | Board editor (PCB) | 22 | 13 | 59% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **24** | **43%** |
+| **Total** | **56** | **25** | **45%** |
 
 ### Common (base)
 
@@ -88,7 +88,7 @@ Legend:
 
 | KiCad Command | Status | Rust API |
 | --- | --- | --- |
-| `GetNetClasses` | Not yet | - |
+| `GetNetClasses` | Implemented | `KiCadClient::get_net_classes_raw`, `KiCadClient::get_net_classes` |
 | `SetNetClasses` | Not yet | - |
 | `ExpandTextVariables` | Not yet | - |
 | `GetTextVariables` | Not yet | - |

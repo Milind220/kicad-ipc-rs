@@ -47,6 +47,12 @@ List nets:
 cargo run --bin kicad-ipc-cli -- nets
 ```
 
+List project net classes:
+
+```bash
+cargo run --bin kicad-ipc-cli -- net-classes
+```
+
 List enabled board layers:
 
 ```bash

@@ -35,6 +35,7 @@ const KICAD_API_TOKEN_ENV: &str = "KICAD_API_TOKEN";
 
 const CMD_PING: &str = "kiapi.common.commands.Ping";
 const CMD_GET_VERSION: &str = "kiapi.common.commands.GetVersion";
+const CMD_GET_NET_CLASSES: &str = "kiapi.common.commands.GetNetClasses";
 const CMD_GET_OPEN_DOCUMENTS: &str = "kiapi.common.commands.GetOpenDocuments";
 const CMD_GET_NETS: &str = "kiapi.board.commands.GetNets";
 const CMD_GET_BOARD_ENABLED_LAYERS: &str = "kiapi.board.commands.GetBoardEnabledLayers";
@@ -61,6 +62,7 @@ const CMD_SAVE_DOCUMENT_TO_STRING: &str = "kiapi.common.commands.SaveDocumentToS
 const CMD_SAVE_SELECTION_TO_STRING: &str = "kiapi.common.commands.SaveSelectionToString";
 
 const RES_GET_VERSION: &str = "kiapi.common.commands.GetVersionResponse";
+const RES_NET_CLASSES_RESPONSE: &str = "kiapi.common.commands.NetClassesResponse";
 const RES_GET_OPEN_DOCUMENTS: &str = "kiapi.common.commands.GetOpenDocumentsResponse";
 const RES_GET_NETS: &str = "kiapi.board.commands.NetsResponse";
 const RES_GET_BOARD_ENABLED_LAYERS: &str = "kiapi.board.commands.BoardEnabledLayersResponse";
@@ -315,6 +317,28 @@ impl KiCadClient {
             .into_iter()
             .filter_map(map_document_specifier)
             .collect())
+    }
+
+    pub async fn get_net_classes_raw(&self) -> Result<prost_types::Any, KiCadError> {
+        let command = common_commands::GetNetClasses {};
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_GET_NET_CLASSES))
+            .await?;
+        response_payload_as_any(response, RES_NET_CLASSES_RESPONSE)
+    }
+
+    pub async fn get_net_classes(&self) -> Result<Vec<NetClassInfo>, KiCadError> {
+        let payload = self.get_net_classes_raw().await?;
+        let response: common_commands::NetClassesResponse =
+            decode_any(&payload, RES_NET_CLASSES_RESPONSE)?;
+
+        let mut classes: Vec<NetClassInfo> = response
+            .net_classes
+            .into_iter()
+            .map(map_net_class_info)
+            .collect();
+        classes.sort_by(|left, right| left.name.cmp(&right.name));
+        Ok(classes)
     }
 
     pub async fn get_current_project_path(&self) -> Result<PathBuf, KiCadError> {
