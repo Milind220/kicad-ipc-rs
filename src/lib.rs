@@ -34,7 +34,7 @@ pub use crate::model::board::{
 };
 pub use crate::model::common::{
     CommitAction, CommitSession, DocumentSpecifier, DocumentType, EditorFrameType, ItemBoundingBox,
-    ItemHitTestResult, PcbObjectTypeCode, SelectionItemDetail, SelectionSummary,
+    ItemHitTestResult, PcbObjectTypeCode, RunActionStatus, SelectionItemDetail, SelectionSummary,
     SelectionTypeCount, TextAsShapesEntry, TextAttributesSpec, TextBoxSpec, TextExtents,
     TextHorizontalAlignment, TextObjectSpec, TextShape, TextShapeGeometry, TextSpec,
     TextVerticalAlignment, TitleBlockInfo, VersionInfo,

@@ -38,6 +38,7 @@ Deferred manual/runtime verification (implemented after 2026-02-20 while user un
 - `SaveDocument`
 - `SaveCopyOfDocument`
 - `RevertDocument`
+- `RunAction`
 
 ## KiCad v10 RC1.1 API Completion Matrix
 
@@ -58,11 +59,11 @@ Legend:
 | Section | Proto Commands | Implemented | Coverage |
 | --- | ---: | ---: | ---: |
 | Common (base) | 6 | 6 | 100% |
-| Common editor/document | 23 | 18 | 78% |
+| Common editor/document | 23 | 19 | 83% |
 | Project manager | 5 | 3 | 60% |
 | Board editor (PCB) | 22 | 20 | 91% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **47** | **84%** |
+| **Total** | **56** | **48** | **86%** |
 
 ### Common (base)
 
@@ -84,7 +85,7 @@ Legend:
 | `SaveDocument` | Implemented | `KiCadClient::save_document_raw`, `KiCadClient::save_document` |
 | `SaveCopyOfDocument` | Implemented | `KiCadClient::save_copy_of_document_raw`, `KiCadClient::save_copy_of_document` |
 | `RevertDocument` | Implemented | `KiCadClient::revert_document_raw`, `KiCadClient::revert_document` |
-| `RunAction` | Not yet | - |
+| `RunAction` | Implemented | `KiCadClient::run_action_raw`, `KiCadClient::run_action` |
 | `BeginCommit` | Implemented | `KiCadClient::begin_commit_raw`, `KiCadClient::begin_commit` |
 | `EndCommit` | Implemented | `KiCadClient::end_commit_raw`, `KiCadClient::end_commit` |
 | `CreateItems` | Not yet | - |

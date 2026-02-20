@@ -181,6 +181,12 @@ Revert current board document from disk:
 cargo run --bin kicad-ipc-cli -- revert-doc
 ```
 
+Run a raw KiCad tool action:
+
+```bash
+cargo run --bin kicad-ipc-cli -- run-action --action pcbnew.InteractiveSelection.ClearSelection
+```
+
 Show summary of current PCB selection by item type:
 
 ```bash

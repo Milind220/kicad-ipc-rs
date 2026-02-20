@@ -19,9 +19,9 @@ use crate::model::board::{
 };
 use crate::model::common::{
     CommitAction, CommitSession, DocumentSpecifier, DocumentType, EditorFrameType, ItemBoundingBox,
-    ItemHitTestResult, PcbObjectTypeCode, ProjectInfo, SelectionItemDetail, SelectionSummary,
-    SelectionTypeCount, TextAsShapesEntry, TextAttributesSpec, TextBoxSpec, TextExtents,
-    TextHorizontalAlignment, TextObjectSpec, TextShape, TextShapeGeometry, TextSpec,
+    ItemHitTestResult, PcbObjectTypeCode, ProjectInfo, RunActionStatus, SelectionItemDetail,
+    SelectionSummary, SelectionTypeCount, TextAsShapesEntry, TextAttributesSpec, TextBoxSpec,
+    TextExtents, TextHorizontalAlignment, TextObjectSpec, TextShape, TextShapeGeometry, TextSpec,
     TextVerticalAlignment, TitleBlockInfo, VersionInfo,
 };
 use crate::proto::kiapi::board as board_proto;
@@ -46,6 +46,7 @@ const CMD_GET_TEXT_EXTENTS: &str = "kiapi.common.commands.GetTextExtents";
 const CMD_GET_TEXT_AS_SHAPES: &str = "kiapi.common.commands.GetTextAsShapes";
 const CMD_REFRESH_EDITOR: &str = "kiapi.common.commands.RefreshEditor";
 const CMD_GET_OPEN_DOCUMENTS: &str = "kiapi.common.commands.GetOpenDocuments";
+const CMD_RUN_ACTION: &str = "kiapi.common.commands.RunAction";
 const CMD_GET_NETS: &str = "kiapi.board.commands.GetNets";
 const CMD_GET_BOARD_ENABLED_LAYERS: &str = "kiapi.board.commands.GetBoardEnabledLayers";
 const CMD_SET_BOARD_ENABLED_LAYERS: &str = "kiapi.board.commands.SetBoardEnabledLayers";
@@ -96,6 +97,7 @@ const RES_EXPAND_TEXT_VARIABLES_RESPONSE: &str =
 const RES_BOX2: &str = "kiapi.common.types.Box2";
 const RES_GET_TEXT_AS_SHAPES_RESPONSE: &str = "kiapi.common.commands.GetTextAsShapesResponse";
 const RES_GET_OPEN_DOCUMENTS: &str = "kiapi.common.commands.GetOpenDocumentsResponse";
+const RES_RUN_ACTION_RESPONSE: &str = "kiapi.common.commands.RunActionResponse";
 const RES_GET_NETS: &str = "kiapi.board.commands.NetsResponse";
 const RES_GET_BOARD_ENABLED_LAYERS: &str = "kiapi.board.commands.BoardEnabledLayersResponse";
 const RES_BOARD_LAYER_RESPONSE: &str = "kiapi.board.commands.BoardLayerResponse";
@@ -323,6 +325,29 @@ impl KiCadClient {
         );
         self.send_command(command).await?;
         Ok(())
+    }
+
+    pub async fn run_action_raw(
+        &self,
+        action: impl Into<String>,
+    ) -> Result<prost_types::Any, KiCadError> {
+        let command = common_commands::RunAction {
+            action: action.into(),
+        };
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_RUN_ACTION))
+            .await?;
+        response_payload_as_any(response, RES_RUN_ACTION_RESPONSE)
+    }
+
+    pub async fn run_action(
+        &self,
+        action: impl Into<String>,
+    ) -> Result<RunActionStatus, KiCadError> {
+        let payload = self.run_action_raw(action).await?;
+        let response: common_commands::RunActionResponse =
+            decode_any(&payload, RES_RUN_ACTION_RESPONSE)?;
+        Ok(map_run_action_status(response.status))
     }
 
     pub async fn get_version(&self) -> Result<VersionInfo, KiCadError> {
@@ -2074,6 +2099,18 @@ fn map_hit_test_result(value: i32) -> ItemHitTestResult {
     }
 }
 
+fn map_run_action_status(value: i32) -> RunActionStatus {
+    let status = common_commands::RunActionStatus::try_from(value)
+        .unwrap_or(common_commands::RunActionStatus::RasUnknown);
+
+    match status {
+        common_commands::RunActionStatus::RasOk => RunActionStatus::Ok,
+        common_commands::RunActionStatus::RasInvalid => RunActionStatus::Invalid,
+        common_commands::RunActionStatus::RasFrameNotOpen => RunActionStatus::FrameNotOpen,
+        common_commands::RunActionStatus::RasUnknown => RunActionStatus::Unknown(value),
+    }
+}
+
 fn map_polygon_with_holes(
     polygon: common_types::PolygonWithHoles,
 ) -> Result<PolygonWithHolesNm, KiCadError> {
@@ -3149,10 +3186,11 @@ mod tests {
         any_to_pretty_debug, board_editor_appearance_settings_to_proto, commit_action_to_proto,
         drc_severity_to_proto, ensure_item_request_ok, layer_to_model, map_commit_session,
         map_hit_test_result, map_item_bounding_boxes, map_polygon_with_holes,
-        model_document_to_proto, normalize_socket_uri, pad_netlist_from_footprint_items,
-        response_payload_as_any, select_single_board_document, select_single_project_path,
-        selection_item_detail, summarize_item_details, summarize_selection,
-        text_horizontal_alignment_to_proto, text_spec_to_proto, PCB_OBJECT_TYPES,
+        map_run_action_status, model_document_to_proto, normalize_socket_uri,
+        pad_netlist_from_footprint_items, response_payload_as_any, select_single_board_document,
+        select_single_project_path, selection_item_detail, summarize_item_details,
+        summarize_selection, text_horizontal_alignment_to_proto, text_spec_to_proto,
+        PCB_OBJECT_TYPES,
     };
     use crate::error::KiCadError;
     use crate::model::common::{
@@ -3604,6 +3642,32 @@ mod tests {
                 crate::proto::kiapi::common::commands::HitTestResult::HtrNoHit as i32
             ),
             crate::model::common::ItemHitTestResult::NoHit
+        );
+    }
+
+    #[test]
+    fn map_run_action_status_covers_known_variants() {
+        assert_eq!(
+            map_run_action_status(
+                crate::proto::kiapi::common::commands::RunActionStatus::RasOk as i32
+            ),
+            crate::model::common::RunActionStatus::Ok
+        );
+        assert_eq!(
+            map_run_action_status(
+                crate::proto::kiapi::common::commands::RunActionStatus::RasInvalid as i32
+            ),
+            crate::model::common::RunActionStatus::Invalid
+        );
+        assert_eq!(
+            map_run_action_status(
+                crate::proto::kiapi::common::commands::RunActionStatus::RasFrameNotOpen as i32
+            ),
+            crate::model::common::RunActionStatus::FrameNotOpen
+        );
+        assert_eq!(
+            map_run_action_status(1234),
+            crate::model::common::RunActionStatus::Unknown(1234)
         );
     }
 
