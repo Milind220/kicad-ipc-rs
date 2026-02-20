@@ -175,6 +175,12 @@ Save a copy of current board document:
 cargo run --bin kicad-ipc-cli -- save-copy --path /tmp/example.kicad_pcb --overwrite --include-project
 ```
 
+Revert current board document from disk:
+
+```bash
+cargo run --bin kicad-ipc-cli -- revert-doc
+```
+
 Show summary of current PCB selection by item type:
 
 ```bash
