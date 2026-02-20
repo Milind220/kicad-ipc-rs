@@ -21,9 +21,16 @@ pub(crate) mod proto;
 pub use crate::client::{ClientBuilder, KiCadClient};
 pub use crate::error::KiCadError;
 pub use crate::model::board::{
-    ArcStartMidEndNm, BoardEnabledLayers, BoardLayerInfo, BoardNet, BoardOriginKind, PadNetEntry,
-    PadShapeAsPolygonEntry, PadstackPresenceEntry, PolyLineNm, PolyLineNodeGeometryNm,
-    PolygonWithHolesNm, Vector2Nm,
+    ArcStartMidEndNm, BoardEditorAppearanceSettings, BoardEnabledLayers, BoardFlipMode,
+    BoardLayerClass, BoardLayerGraphicsDefault, BoardLayerInfo, BoardNet, BoardOriginKind,
+    BoardStackup, BoardStackupDielectricProperties, BoardStackupLayer, BoardStackupLayerType,
+    ColorRgba, GraphicsDefaults, InactiveLayerDisplayMode, NetClassBoardSettings,
+    NetClassForNetEntry, NetClassInfo, NetClassType, NetColorDisplayMode, PadNetEntry,
+    PadShapeAsPolygonEntry, PadstackPresenceEntry, PadstackPresenceState, PcbArc,
+    PcbBoardGraphicShape, PcbBoardText, PcbBoardTextBox, PcbDimension, PcbField, PcbFootprint,
+    PcbGroup, PcbItem, PcbPad, PcbPadType, PcbTrack, PcbUnknownItem, PcbVia, PcbViaType, PcbZone,
+    PcbZoneType, PolyLineNm, PolyLineNodeGeometryNm, PolygonWithHolesNm, RatsnestDisplayMode,
+    Vector2Nm,
 };
 pub use crate::model::common::{
     DocumentSpecifier, DocumentType, ItemBoundingBox, ItemHitTestResult, PcbObjectTypeCode,

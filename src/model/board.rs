@@ -101,7 +101,323 @@ pub struct PadstackPresenceEntry {
     pub item_id: String,
     pub layer_id: i32,
     pub layer_name: String,
-    pub presence: String,
+    pub presence: PadstackPresenceState,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PadstackPresenceState {
+    Present,
+    NotPresent,
+    Unknown(i32),
+}
+
+impl std::fmt::Display for PadstackPresenceState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Present => write!(f, "PSP_PRESENT"),
+            Self::NotPresent => write!(f, "PSP_NOT_PRESENT"),
+            Self::Unknown(value) => write!(f, "UNKNOWN({value})"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ColorRgba {
+    pub r: f64,
+    pub g: f64,
+    pub b: f64,
+    pub a: f64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BoardStackupLayerType {
+    Copper,
+    Dielectric,
+    Silkscreen,
+    SolderMask,
+    SolderPaste,
+    Undefined,
+    Unknown(i32),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoardStackupDielectricProperties {
+    pub epsilon_r: f64,
+    pub loss_tangent: f64,
+    pub material_name: String,
+    pub thickness_nm: Option<i64>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoardStackupLayer {
+    pub layer: BoardLayerInfo,
+    pub user_name: String,
+    pub material_name: String,
+    pub enabled: bool,
+    pub thickness_nm: Option<i64>,
+    pub layer_type: BoardStackupLayerType,
+    pub color: Option<ColorRgba>,
+    pub dielectric_layers: Vec<BoardStackupDielectricProperties>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoardStackup {
+    pub finish_type_name: String,
+    pub impedance_controlled: bool,
+    pub edge_has_castellated_pads: bool,
+    pub edge_has_edge_plating: bool,
+    pub layers: Vec<BoardStackupLayer>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BoardLayerClass {
+    Silkscreen,
+    Copper,
+    Edges,
+    Courtyard,
+    Fabrication,
+    Other,
+    Unknown(i32),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoardLayerGraphicsDefault {
+    pub layer_class: BoardLayerClass,
+    pub line_thickness_nm: Option<i64>,
+    pub text_font_name: Option<String>,
+    pub text_size_nm: Option<Vector2Nm>,
+    pub text_stroke_width_nm: Option<i64>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GraphicsDefaults {
+    pub layers: Vec<BoardLayerGraphicsDefault>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InactiveLayerDisplayMode {
+    Normal,
+    Dimmed,
+    Hidden,
+    Unknown(i32),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NetColorDisplayMode {
+    All,
+    Ratsnest,
+    Off,
+    Unknown(i32),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BoardFlipMode {
+    Normal,
+    FlippedX,
+    Unknown(i32),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RatsnestDisplayMode {
+    AllLayers,
+    VisibleLayers,
+    Unknown(i32),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BoardEditorAppearanceSettings {
+    pub inactive_layer_display: InactiveLayerDisplayMode,
+    pub net_color_display: NetColorDisplayMode,
+    pub board_flip: BoardFlipMode,
+    pub ratsnest_display: RatsnestDisplayMode,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NetClassType {
+    Explicit,
+    Implicit,
+    Unknown(i32),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct NetClassBoardSettings {
+    pub clearance_nm: Option<i64>,
+    pub track_width_nm: Option<i64>,
+    pub diff_pair_track_width_nm: Option<i64>,
+    pub diff_pair_gap_nm: Option<i64>,
+    pub diff_pair_via_gap_nm: Option<i64>,
+    pub color: Option<ColorRgba>,
+    pub tuning_profile: Option<String>,
+    pub has_via_stack: bool,
+    pub has_microvia_stack: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct NetClassInfo {
+    pub name: String,
+    pub priority: Option<i32>,
+    pub class_type: NetClassType,
+    pub constituents: Vec<String>,
+    pub board: Option<NetClassBoardSettings>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct NetClassForNetEntry {
+    pub net_name: String,
+    pub net_class: NetClassInfo,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PcbViaType {
+    Through,
+    BlindBuried,
+    Micro,
+    Blind,
+    Buried,
+    Unknown(i32),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PcbPadType {
+    Pth,
+    Smd,
+    EdgeConnector,
+    Npth,
+    Unknown(i32),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PcbZoneType {
+    Copper,
+    Graphical,
+    RuleArea,
+    Teardrop,
+    Unknown(i32),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbTrack {
+    pub id: Option<String>,
+    pub start_nm: Option<Vector2Nm>,
+    pub end_nm: Option<Vector2Nm>,
+    pub width_nm: Option<i64>,
+    pub layer: BoardLayerInfo,
+    pub net: Option<BoardNet>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbArc {
+    pub id: Option<String>,
+    pub start_nm: Option<Vector2Nm>,
+    pub mid_nm: Option<Vector2Nm>,
+    pub end_nm: Option<Vector2Nm>,
+    pub width_nm: Option<i64>,
+    pub layer: BoardLayerInfo,
+    pub net: Option<BoardNet>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbVia {
+    pub id: Option<String>,
+    pub position_nm: Option<Vector2Nm>,
+    pub via_type: PcbViaType,
+    pub net: Option<BoardNet>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PcbFootprint {
+    pub id: Option<String>,
+    pub reference: Option<String>,
+    pub position_nm: Option<Vector2Nm>,
+    pub orientation_deg: Option<f64>,
+    pub layer: BoardLayerInfo,
+    pub pad_count: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbPad {
+    pub id: Option<String>,
+    pub number: String,
+    pub pad_type: PcbPadType,
+    pub position_nm: Option<Vector2Nm>,
+    pub net: Option<BoardNet>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbBoardGraphicShape {
+    pub id: Option<String>,
+    pub layer: BoardLayerInfo,
+    pub net: Option<BoardNet>,
+    pub geometry_kind: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbBoardText {
+    pub id: Option<String>,
+    pub layer: BoardLayerInfo,
+    pub text: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbBoardTextBox {
+    pub id: Option<String>,
+    pub layer: BoardLayerInfo,
+    pub text: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbField {
+    pub name: String,
+    pub visible: bool,
+    pub text: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbZone {
+    pub id: Option<String>,
+    pub name: String,
+    pub zone_type: PcbZoneType,
+    pub layer_count: usize,
+    pub filled: bool,
+    pub polygon_count: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbDimension {
+    pub id: Option<String>,
+    pub layer: BoardLayerInfo,
+    pub text: Option<String>,
+    pub style_kind: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbGroup {
+    pub id: Option<String>,
+    pub name: String,
+    pub item_count: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbUnknownItem {
+    pub type_url: String,
+    pub raw_len: usize,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PcbItem {
+    Track(PcbTrack),
+    Arc(PcbArc),
+    Via(PcbVia),
+    Footprint(PcbFootprint),
+    Pad(PcbPad),
+    BoardGraphicShape(PcbBoardGraphicShape),
+    BoardText(PcbBoardText),
+    BoardTextBox(PcbBoardTextBox),
+    Field(PcbField),
+    Zone(PcbZone),
+    Dimension(PcbDimension),
+    Group(PcbGroup),
+    Unknown(PcbUnknownItem),
 }
 
 #[cfg(test)]
