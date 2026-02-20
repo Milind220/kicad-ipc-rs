@@ -65,6 +65,7 @@ const CMD_GET_BOARD_EDITOR_APPEARANCE_SETTINGS: &str =
     "kiapi.board.commands.GetBoardEditorAppearanceSettings";
 const CMD_SET_BOARD_EDITOR_APPEARANCE_SETTINGS: &str =
     "kiapi.board.commands.SetBoardEditorAppearanceSettings";
+const CMD_INTERACTIVE_MOVE_ITEMS: &str = "kiapi.board.commands.InteractiveMoveItems";
 const CMD_GET_ITEMS_BY_NET: &str = "kiapi.board.commands.GetItemsByNet";
 const CMD_GET_ITEMS_BY_NET_CLASS: &str = "kiapi.board.commands.GetItemsByNetClass";
 const CMD_GET_NETCLASS_FOR_NETS: &str = "kiapi.board.commands.GetNetClassForNets";
@@ -1610,6 +1611,35 @@ impl KiCadClient {
             .await?;
         let _ = response_payload_as_any(response, RES_PROTOBUF_EMPTY)?;
         self.get_board_editor_appearance_settings().await
+    }
+
+    pub async fn interactive_move_items_raw(
+        &self,
+        item_ids: Vec<String>,
+    ) -> Result<prost_types::Any, KiCadError> {
+        if item_ids.is_empty() {
+            return Err(KiCadError::Config {
+                reason: "interactive_move_items_raw requires at least one item id".to_string(),
+            });
+        }
+
+        let command = board_commands::InteractiveMoveItems {
+            board: Some(self.current_board_document_proto().await?),
+            items: item_ids
+                .into_iter()
+                .map(|value| common_types::Kiid { value })
+                .collect(),
+        };
+
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_INTERACTIVE_MOVE_ITEMS))
+            .await?;
+        response_payload_as_any(response, RES_PROTOBUF_EMPTY)
+    }
+
+    pub async fn interactive_move_items(&self, item_ids: Vec<String>) -> Result<(), KiCadError> {
+        let _ = self.interactive_move_items_raw(item_ids).await?;
+        Ok(())
     }
 
     pub async fn get_title_block_info(&self) -> Result<TitleBlockInfo, KiCadError> {

@@ -46,6 +46,7 @@ Deferred manual/runtime verification (implemented after 2026-02-20 while user un
 - `SetNetClasses`
 - `SetTextVariables`
 - `UpdateBoardStackup`
+- `InteractiveMoveItems`
 
 ## KiCad v10 RC1.1 API Completion Matrix
 
@@ -68,9 +69,9 @@ Legend:
 | Common (base) | 6 | 6 | 100% |
 | Common editor/document | 23 | 23 | 100% |
 | Project manager | 5 | 5 | 100% |
-| Board editor (PCB) | 22 | 21 | 95% |
+| Board editor (PCB) | 22 | 22 | 100% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **55** | **98%** |
+| **Total** | **56** | **56** | **100%** |
 
 ### Common (base)
 
@@ -146,7 +147,7 @@ Legend:
 | `SetActiveLayer` | Implemented | `KiCadClient::set_active_layer` |
 | `GetBoardEditorAppearanceSettings` | Implemented | `KiCadClient::get_board_editor_appearance_settings_raw`, `KiCadClient::get_board_editor_appearance_settings` |
 | `SetBoardEditorAppearanceSettings` | Implemented | `KiCadClient::set_board_editor_appearance_settings` |
-| `InteractiveMoveItems` | Not yet | - |
+| `InteractiveMoveItems` | Implemented | `KiCadClient::interactive_move_items_raw`, `KiCadClient::interactive_move_items` |
 
 ### Schematic editor
 

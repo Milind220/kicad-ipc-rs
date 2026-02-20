@@ -364,6 +364,12 @@ Refill all zones:
 cargo run --bin kicad-ipc-cli -- refill-zones
 ```
 
+Start interactive move tool for one or more item IDs:
+
+```bash
+cargo run --bin kicad-ipc-cli -- interactive-move --id <uuid> --id <uuid>
+```
+
 Show typed netclass map:
 
 ```bash
