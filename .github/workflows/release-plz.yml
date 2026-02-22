@@ -7,12 +7,14 @@ on:
   workflow_dispatch:
 
 jobs:
+
   release-plz-release:
     name: release-plz release
     runs-on: ubuntu-latest
     permissions:
       contents: write
     environment: CRATE_RELEASE
+    
     steps:
       - &checkout
         name: Checkout repository
