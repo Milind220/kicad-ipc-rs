@@ -400,7 +400,7 @@ Notes:
 - Report output is intentionally capped for very large boards to avoid multi-GB files.
 - For full raw payloads, use targeted commands such as `items-raw --debug`, `pad-shape-polygon --debug`, and `padstack-presence --debug`.
 
-Get current project path (derived from open PCB docs):
+Get current project path (from open PCB docs, or `KIPRJMOD` when `GetOpenDocuments` is unavailable):
 
 ```bash
 cargo run --features blocking --bin kicad-ipc-cli -- project-path

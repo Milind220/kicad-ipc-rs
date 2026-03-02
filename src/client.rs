@@ -3719,13 +3719,7 @@ fn resolve_current_project_path(
     docs_result: Result<Vec<DocumentSpecifier>, KiCadError>,
 ) -> Result<PathBuf, KiCadError> {
     match docs_result {
-        Ok(docs) => match select_single_project_path(&docs) {
-            Ok(path) => Ok(path),
-            Err(KiCadError::BoardNotOpen) => {
-                project_path_from_environment().ok_or(KiCadError::BoardNotOpen)
-            }
-            Err(err) => Err(err),
-        },
+        Ok(docs) => select_single_project_path(&docs),
         Err(err) if is_get_open_documents_unhandled(&err) => {
             project_path_from_environment().ok_or(err)
         }
@@ -3746,8 +3740,7 @@ fn project_path_from_environment() -> Option<PathBuf> {
 fn is_get_open_documents_unhandled(err: &KiCadError) -> bool {
     matches!(
         err,
-        KiCadError::ApiStatus { code, message }
-            if code == "AS_UNHANDLED" && message.contains(CMD_GET_OPEN_DOCUMENTS)
+        KiCadError::ApiStatus { code, .. } if code == "AS_UNHANDLED"
     )
 }
 
@@ -3954,6 +3947,18 @@ mod tests {
     }
 
     #[test]
+    fn resolve_current_project_path_does_not_fallback_when_no_board_docs() {
+        let _guard = ENV_MUTEX.lock().expect("env mutex should lock");
+        std::env::set_var(KIPRJMOD_ENV, "/tmp/kicad-env-project");
+
+        let err = resolve_current_project_path(Ok(Vec::new()))
+            .expect_err("no-board docs should remain BoardNotOpen");
+        assert!(matches!(err, KiCadError::BoardNotOpen));
+
+        std::env::remove_var(KIPRJMOD_ENV);
+    }
+
+    #[test]
     fn project_path_from_environment_ignores_empty_values() {
         let _guard = ENV_MUTEX.lock().expect("env mutex should lock");
         std::env::set_var(KIPRJMOD_ENV, "   ");
@@ -3965,16 +3970,13 @@ mod tests {
     fn is_get_open_documents_unhandled_matches_expected_shape() {
         let unhandled = KiCadError::ApiStatus {
             code: "AS_UNHANDLED".to_string(),
-            message:
-                "no handler available for request of type kiapi.common.commands.GetOpenDocuments"
-                    .to_string(),
+            message: String::new(),
         };
         assert!(is_get_open_documents_unhandled(&unhandled));
 
         let other = KiCadError::ApiStatus {
-            code: "AS_UNHANDLED".to_string(),
-            message: "no handler available for request of type kiapi.common.commands.RefreshEditor"
-                .to_string(),
+            code: "AS_BAD_REQUEST".to_string(),
+            message: "bad request".to_string(),
         };
         assert!(!is_get_open_documents_unhandled(&other));
     }
