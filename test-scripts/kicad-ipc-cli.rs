@@ -2110,14 +2110,14 @@ COMMANDS:
   plugin-settings-path [--identifier <id>]
                                Resolve writeable plugin settings directory (default: kicad-ipc-rust)
   open-docs [--type <type>]    List open docs (default type: pcb)
-  project-path                 Get current project path from open PCB docs
+  project-path                 Get current project path from open PCB docs (or KIPRJMOD fallback)
   board-open                   Exit non-zero if no PCB doc is open
   net-classes                  List project netclass definitions
   set-net-classes [--merge-mode <merge|replace>]
                                Write current netclass set back with selected merge mode
-  text-variables               List text variables for current board document
+  text-variables               List text variables for current project
   set-text-variables [--merge-mode <merge|replace>] [--var <name=value> ...]
-                               Set text variables for current board document
+                               Set text variables for current project
   expand-text-variables        Expand variables in provided text values
                                Options: --text <value> (repeatable)
   text-extents                 Measure text bounding box

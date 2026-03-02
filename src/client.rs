@@ -34,6 +34,7 @@ use crate::transport::Transport;
 
 const KICAD_API_SOCKET_ENV: &str = "KICAD_API_SOCKET";
 const KICAD_API_TOKEN_ENV: &str = "KICAD_API_TOKEN";
+const KIPRJMOD_ENV: &str = "KIPRJMOD";
 
 const CMD_PING: &str = "kiapi.common.commands.Ping";
 const CMD_GET_VERSION: &str = "kiapi.common.commands.GetVersion";
@@ -536,7 +537,7 @@ impl KiCadClient {
 
     pub async fn get_text_variables_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::GetTextVariables {
-            document: Some(self.current_board_document_proto().await?),
+            document: Some(project_document_proto()),
         };
         let response = self
             .send_command(envelope::pack_any(&command, CMD_GET_TEXT_VARIABLES))
@@ -557,7 +558,7 @@ impl KiCadClient {
         merge_mode: MapMergeMode,
     ) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::SetTextVariables {
-            document: Some(self.current_board_document_proto().await?),
+            document: Some(project_document_proto()),
             variables: Some(common_project::TextVariables {
                 variables: variables.into_iter().collect(),
             }),
@@ -584,7 +585,7 @@ impl KiCadClient {
         text: Vec<String>,
     ) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::ExpandTextVariables {
-            document: Some(self.current_board_document_proto().await?),
+            document: Some(project_document_proto()),
             text,
         };
         let response = self
@@ -667,12 +668,13 @@ impl KiCadClient {
             .collect()
     }
 
-    /// Returns the current PCB project's path.
+    /// Returns the current project path.
     ///
-    /// Fails if no PCB is open or if multiple project paths are present.
+    /// First queries open PCB documents. If KiCad reports `GetOpenDocuments` as unhandled,
+    /// this falls back to the `KIPRJMOD` environment variable when available.
     pub async fn get_current_project_path(&self) -> Result<PathBuf, KiCadError> {
-        let docs = self.get_open_documents(DocumentType::Pcb).await?;
-        select_single_project_path(&docs)
+        let docs = self.get_open_documents(DocumentType::Pcb).await;
+        resolve_current_project_path(docs)
     }
 
     /// Returns `true` when at least one PCB document is open in KiCad.
@@ -2076,6 +2078,14 @@ fn model_document_to_proto(document: &DocumentSpecifier) -> common_types::Docume
         r#type: document.document_type.to_proto(),
         project: Some(project),
         identifier,
+    }
+}
+
+fn project_document_proto() -> common_types::DocumentSpecifier {
+    common_types::DocumentSpecifier {
+        r#type: DocumentType::Project.to_proto(),
+        project: Some(common_types::ProjectSpecifier::default()),
+        identifier: None,
     }
 }
 
@@ -3705,6 +3715,42 @@ fn select_single_project_path(docs: &[DocumentSpecifier]) -> Result<PathBuf, KiC
     Ok(PathBuf::from(first))
 }
 
+fn resolve_current_project_path(
+    docs_result: Result<Vec<DocumentSpecifier>, KiCadError>,
+) -> Result<PathBuf, KiCadError> {
+    match docs_result {
+        Ok(docs) => match select_single_project_path(&docs) {
+            Ok(path) => Ok(path),
+            Err(KiCadError::BoardNotOpen) => {
+                project_path_from_environment().ok_or(KiCadError::BoardNotOpen)
+            }
+            Err(err) => Err(err),
+        },
+        Err(err) if is_get_open_documents_unhandled(&err) => {
+            project_path_from_environment().ok_or(err)
+        }
+        Err(err) => Err(err),
+    }
+}
+
+fn project_path_from_environment() -> Option<PathBuf> {
+    let value = std::env::var(KIPRJMOD_ENV).ok()?;
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    Some(PathBuf::from(trimmed))
+}
+
+fn is_get_open_documents_unhandled(err: &KiCadError) -> bool {
+    matches!(
+        err,
+        KiCadError::ApiStatus { code, message }
+            if code == "AS_UNHANDLED" && message.contains(CMD_GET_OPEN_DOCUMENTS)
+    )
+}
+
 fn resolve_socket_uri(explicit: Option<&str>) -> String {
     if let Some(socket) = explicit {
         return normalize_socket_uri(socket);
@@ -3781,13 +3827,14 @@ mod tests {
         any_to_pretty_debug, board_editor_appearance_settings_to_proto, board_stackup_to_proto,
         commit_action_to_proto, decode_pcb_item, drc_severity_to_proto,
         ensure_item_deletion_status_ok, ensure_item_request_ok, ensure_item_status_ok,
-        layer_to_model, map_board_stackup, map_commit_session, map_hit_test_result,
-        map_item_bounding_boxes, map_merge_mode_to_proto, map_polygon_with_holes,
-        map_run_action_status, model_document_to_proto, normalize_socket_uri,
-        pad_netlist_from_footprint_items, response_payload_as_any, select_single_board_document,
-        select_single_project_path, selection_item_detail, summarize_item_details,
-        summarize_selection, text_horizontal_alignment_to_proto, text_spec_to_proto,
-        PCB_OBJECT_TYPES,
+        is_get_open_documents_unhandled, layer_to_model, map_board_stackup, map_commit_session,
+        map_hit_test_result, map_item_bounding_boxes, map_merge_mode_to_proto,
+        map_polygon_with_holes, map_run_action_status, model_document_to_proto,
+        normalize_socket_uri, pad_netlist_from_footprint_items, project_document_proto,
+        project_path_from_environment, resolve_current_project_path, response_payload_as_any,
+        select_single_board_document, select_single_project_path, selection_item_detail,
+        summarize_item_details, summarize_selection, text_horizontal_alignment_to_proto,
+        text_spec_to_proto, KIPRJMOD_ENV, PCB_OBJECT_TYPES,
     };
     use crate::error::KiCadError;
     use crate::model::board::{
@@ -3799,6 +3846,9 @@ mod tests {
     };
     use prost::Message;
     use std::path::PathBuf;
+    use std::sync::Mutex;
+
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
     #[test]
     fn normalize_socket_uri_adds_ipc_scheme() {
@@ -3810,6 +3860,13 @@ mod tests {
     fn normalize_socket_uri_preserves_existing_scheme() {
         let normalized = normalize_socket_uri("ipc:///tmp/kicad/api.sock");
         assert_eq!(normalized, "ipc:///tmp/kicad/api.sock");
+    }
+
+    #[test]
+    fn project_document_proto_uses_project_type() {
+        let document = project_document_proto();
+        assert_eq!(document.r#type, DocumentType::Project.to_proto());
+        assert!(document.identifier.is_none());
     }
 
     #[test]
@@ -3861,6 +3918,65 @@ mod tests {
         let docs: Vec<DocumentSpecifier> = Vec::new();
         let result = select_single_project_path(&docs);
         assert!(matches!(result, Err(KiCadError::BoardNotOpen)));
+    }
+
+    #[test]
+    fn resolve_current_project_path_reads_env_when_open_docs_unhandled() {
+        let _guard = ENV_MUTEX.lock().expect("env mutex should lock");
+        std::env::set_var(KIPRJMOD_ENV, "/tmp/kicad-env-project");
+
+        let result = resolve_current_project_path(Err(KiCadError::ApiStatus {
+            code: "AS_UNHANDLED".to_string(),
+            message:
+                "no handler available for request of type kiapi.common.commands.GetOpenDocuments"
+                    .to_string(),
+        }))
+        .expect("KIPRJMOD fallback should resolve project path");
+
+        assert_eq!(result, PathBuf::from("/tmp/kicad-env-project"));
+        std::env::remove_var(KIPRJMOD_ENV);
+    }
+
+    #[test]
+    fn resolve_current_project_path_keeps_original_error_without_env() {
+        let _guard = ENV_MUTEX.lock().expect("env mutex should lock");
+        std::env::remove_var(KIPRJMOD_ENV);
+
+        let err = resolve_current_project_path(Err(KiCadError::ApiStatus {
+            code: "AS_UNHANDLED".to_string(),
+            message:
+                "no handler available for request of type kiapi.common.commands.GetOpenDocuments"
+                    .to_string(),
+        }))
+        .expect_err("without env fallback should keep original unhandled error");
+
+        assert!(matches!(err, KiCadError::ApiStatus { .. }));
+    }
+
+    #[test]
+    fn project_path_from_environment_ignores_empty_values() {
+        let _guard = ENV_MUTEX.lock().expect("env mutex should lock");
+        std::env::set_var(KIPRJMOD_ENV, "   ");
+        assert!(project_path_from_environment().is_none());
+        std::env::remove_var(KIPRJMOD_ENV);
+    }
+
+    #[test]
+    fn is_get_open_documents_unhandled_matches_expected_shape() {
+        let unhandled = KiCadError::ApiStatus {
+            code: "AS_UNHANDLED".to_string(),
+            message:
+                "no handler available for request of type kiapi.common.commands.GetOpenDocuments"
+                    .to_string(),
+        };
+        assert!(is_get_open_documents_unhandled(&unhandled));
+
+        let other = KiCadError::ApiStatus {
+            code: "AS_UNHANDLED".to_string(),
+            message: "no handler available for request of type kiapi.common.commands.RefreshEditor"
+                .to_string(),
+        };
+        assert!(!is_get_open_documents_unhandled(&other));
     }
 
     #[test]

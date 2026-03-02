@@ -79,7 +79,7 @@ Write current net classes back with selected merge mode:
 cargo run --features blocking --bin kicad-ipc-cli -- set-net-classes --merge-mode merge
 ```
 
-List text variables for current board document:
+List text variables for current project:
 
 ```bash
 cargo run --features blocking --bin kicad-ipc-cli -- text-variables
