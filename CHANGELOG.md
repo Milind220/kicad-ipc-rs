@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2](https://github.com/Milind220/kicad-ipc-rs/compare/v0.3.1...v0.3.2) - 2026-03-02
+
+### Fixed
+
+- decouple project commands from GetOpenDocuments and add KIPRJMOD fallback ([#16](https://github.com/Milind220/kicad-ipc-rs/pull/16))
+
+### Other
+
+- add mdBook guide site and Pages deploy workflow ([#15](https://github.com/Milind220/kicad-ipc-rs/pull/15))
+
 ## [0.3.1](https://github.com/Milind220/kicad-ipc-rs/compare/v0.3.0...v0.3.1) - 2026-02-28
 
 ### Fixed
