@@ -23,4 +23,9 @@ target
 prompts/
 
 *.DS_Store
-book/
+
+# mdBook build output at repo root
+/book/
+# Keep docs/book source tracked
+!docs/book/
+!docs/book/**
