@@ -2144,7 +2144,7 @@ COMMANDS:
                                Check padstack shape presence matrix across layers
   title-block                  Show title block fields
   board-as-string              Dump board as KiCad s-expression text
-  selection-as-string          Dump current selection as KiCad s-expression text
+  selection-as-string          Dump current selection IDs + KiCad s-expression text
   stackup                      Show typed board stackup
   update-stackup               Round-trip current stackup through UpdateBoardStackup
   graphics-defaults            Show typed graphics defaults

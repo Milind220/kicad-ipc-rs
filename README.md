@@ -161,14 +161,14 @@ Legend:
 | `UpdateItems` | Implemented | `KiCadClient::update_items_raw`, `KiCadClient::update_items` |
 | `DeleteItems` | Implemented | `KiCadClient::delete_items_raw`, `KiCadClient::delete_items` |
 | `GetBoundingBox` | Implemented | `KiCadClient::get_item_bounding_boxes` |
-| `GetSelection` | Implemented | `KiCadClient::get_selection_raw`, `KiCadClient::get_selection`, `KiCadClient::get_selection_summary`, `KiCadClient::get_selection_details` |
-| `AddToSelection` | Implemented | `KiCadClient::add_to_selection_raw`, `KiCadClient::add_to_selection` |
-| `RemoveFromSelection` | Implemented | `KiCadClient::remove_from_selection_raw`, `KiCadClient::remove_from_selection` |
-| `ClearSelection` | Implemented | `KiCadClient::clear_selection_raw`, `KiCadClient::clear_selection` |
+| `GetSelection` | Implemented | `KiCadClient::get_selection_raw(type_codes)`, `KiCadClient::get_selection(type_codes)`, `KiCadClient::get_selection_summary(type_codes)`, `KiCadClient::get_selection_details(type_codes)` |
+| `AddToSelection` | Implemented | `KiCadClient::add_to_selection_raw`, `KiCadClient::add_to_selection` (`SelectionMutationResult`) |
+| `RemoveFromSelection` | Implemented | `KiCadClient::remove_from_selection_raw`, `KiCadClient::remove_from_selection` (`SelectionMutationResult`) |
+| `ClearSelection` | Implemented | `KiCadClient::clear_selection_raw`, `KiCadClient::clear_selection` (`SelectionMutationResult`) |
 | `HitTest` | Implemented | `KiCadClient::hit_test_item` |
 | `GetTitleBlockInfo` | Implemented | `KiCadClient::get_title_block_info` |
 | `SaveDocumentToString` | Implemented | `KiCadClient::get_board_as_string` |
-| `SaveSelectionToString` | Implemented | `KiCadClient::get_selection_as_string` |
+| `SaveSelectionToString` | Implemented | `KiCadClient::get_selection_as_string` (`SelectionStringDump { ids, contents }`) |
 | `ParseAndCreateItemsFromString` | Implemented | `KiCadClient::parse_and_create_items_from_string_raw`, `KiCadClient::parse_and_create_items_from_string` |
 
 ### Project manager

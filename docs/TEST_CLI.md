@@ -237,6 +237,8 @@ Show summary of current PCB selection by item type:
 cargo run --features blocking --bin kicad-ipc-cli -- selection-summary
 ```
 
+Note: CLI uses `Vec::new()` for `type_codes` on `get_selection_summary`, meaning unfiltered selection.
+
 Show parsed details for currently selected items:
 
 ```bash
@@ -254,6 +256,8 @@ Add items to current selection:
 ```bash
 cargo run --features blocking --bin kicad-ipc-cli -- add-to-selection --id <uuid> --id <uuid>
 ```
+
+Output now comes from `SelectionMutationResult` (`summary` + decoded `items`).
 
 Remove items from current selection:
 
@@ -338,6 +342,8 @@ Dump selection text (KiCad s-expression):
 ```bash
 cargo run --features blocking --bin kicad-ipc-cli -- selection-as-string
 ```
+
+Output includes `selection_id_count`, one `id=` line per selected item, then the `contents` text.
 
 Dump title block fields:
 
