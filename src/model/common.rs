@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use crate::model::board::{ColorRgba, PolygonWithHolesNm, Vector2Nm};
+use crate::model::board::{ColorRgba, PcbItem, PolygonWithHolesNm, Vector2Nm};
 use crate::proto::kiapi::common::types as common_types;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -207,6 +207,24 @@ pub struct SelectionItemDetail {
     pub detail: String,
     /// Raw payload length in bytes.
     pub raw_len: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+/// Selection dump returned by `get_selection_as_string`.
+pub struct SelectionStringDump {
+    /// Ordered ids included in the serialized selection payload.
+    pub ids: Vec<String>,
+    /// Selection serialized as KiCad s-expression text.
+    pub contents: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+/// Result of add/remove/clear selection mutations.
+pub struct SelectionMutationResult {
+    /// Decoded selected items after mutation.
+    pub items: Vec<PcbItem>,
+    /// Compact composition summary for the same selection state.
+    pub summary: SelectionSummary,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

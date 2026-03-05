@@ -5,25 +5,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::envelope;
 use crate::error::KiCadError;
-use crate::model::board::{
-    ArcStartMidEndNm, BoardEditorAppearanceSettings, BoardEnabledLayers, BoardFlipMode,
-    BoardLayerClass, BoardLayerGraphicsDefault, BoardLayerInfo, BoardNet, BoardOriginKind,
-    BoardStackup, BoardStackupDielectricProperties, BoardStackupLayer, BoardStackupLayerType,
-    ColorRgba, DrcSeverity, GraphicsDefaults, InactiveLayerDisplayMode, NetClassBoardSettings,
-    NetClassForNetEntry, NetClassInfo, NetClassType, NetColorDisplayMode, PadNetEntry,
-    PadShapeAsPolygonEntry, PadstackPresenceEntry, PadstackPresenceState, PcbArc,
-    PcbBoardGraphicShape, PcbBoardText, PcbBoardTextBox, PcbDimension, PcbField, PcbFootprint,
-    PcbGroup, PcbItem, PcbPad, PcbPadType, PcbTrack, PcbUnknownItem, PcbVia, PcbViaLayers,
-    PcbViaType, PcbZone, PcbZoneType, PolyLineNm, PolyLineNodeGeometryNm, PolygonWithHolesNm,
-    RatsnestDisplayMode, Vector2Nm,
-};
-use crate::model::common::{
-    CommitAction, CommitSession, DocumentSpecifier, DocumentType, EditorFrameType, ItemBoundingBox,
-    ItemHitTestResult, MapMergeMode, PcbObjectTypeCode, ProjectInfo, RunActionStatus,
-    SelectionItemDetail, SelectionSummary, SelectionTypeCount, TextAsShapesEntry,
-    TextAttributesSpec, TextBoxSpec, TextExtents, TextHorizontalAlignment, TextObjectSpec,
-    TextShape, TextShapeGeometry, TextSpec, TextVerticalAlignment, TitleBlockInfo, VersionInfo,
-};
+use crate::model::board::*;
+use crate::model::common::*;
 use crate::proto::kiapi::board as board_proto;
 use crate::proto::kiapi::board::commands as board_commands;
 use crate::proto::kiapi::board::types as board_types;
@@ -1043,7 +1026,10 @@ impl KiCadClient {
     }
 
     /// Returns a compact summary of the current PCB selection.
-    pub async fn get_selection_summary(&self) -> Result<SelectionSummary, KiCadError> {
+    pub async fn get_selection_summary(
+        &self,
+        type_codes: Vec<i32>,
+    ) -> Result<SelectionSummary, KiCadError> {
         let document = self.current_board_document_proto().await?;
         let command = common_commands::GetSelection {
             header: Some(common_types::ItemHeader {
@@ -1051,7 +1037,7 @@ impl KiCadClient {
                 container: None,
                 field_mask: None,
             }),
-            types: Vec::new(),
+            types: type_codes,
         };
 
         let response = self
@@ -1061,13 +1047,16 @@ impl KiCadClient {
         let payload: common_commands::SelectionResponse =
             envelope::unpack_any(&response, RES_SELECTION_RESPONSE)?;
 
-        Ok(summarize_selection(payload.items))
+        Ok(summarize_selection(&payload.items))
     }
 
-    pub async fn get_selection_raw(&self) -> Result<Vec<prost_types::Any>, KiCadError> {
+    pub async fn get_selection_raw(
+        &self,
+        type_codes: Vec<i32>,
+    ) -> Result<Vec<prost_types::Any>, KiCadError> {
         let command = common_commands::GetSelection {
             header: Some(self.current_board_item_header().await?),
-            types: Vec::new(),
+            types: type_codes,
         };
 
         let response = self
@@ -1080,14 +1069,17 @@ impl KiCadClient {
         Ok(payload.items)
     }
 
-    pub async fn get_selection_details(&self) -> Result<Vec<SelectionItemDetail>, KiCadError> {
-        let items = self.get_selection_raw().await?;
+    pub async fn get_selection_details(
+        &self,
+        type_codes: Vec<i32>,
+    ) -> Result<Vec<SelectionItemDetail>, KiCadError> {
+        let items = self.get_selection_raw(type_codes).await?;
         summarize_item_details(items)
     }
 
     /// Returns the current selection as decoded typed PCB items.
-    pub async fn get_selection(&self) -> Result<Vec<PcbItem>, KiCadError> {
-        let items = self.get_selection_raw().await?;
+    pub async fn get_selection(&self, type_codes: Vec<i32>) -> Result<Vec<PcbItem>, KiCadError> {
+        let items = self.get_selection_raw(type_codes).await?;
         decode_pcb_items(items)
     }
 
@@ -1123,9 +1115,11 @@ impl KiCadClient {
     pub async fn add_to_selection(
         &self,
         item_ids: Vec<String>,
-    ) -> Result<SelectionSummary, KiCadError> {
-        let items = self.add_to_selection_raw(item_ids).await?;
-        Ok(summarize_selection(items))
+    ) -> Result<SelectionMutationResult, KiCadError> {
+        let raw_items = self.add_to_selection_raw(item_ids).await?;
+        let summary = summarize_selection(&raw_items);
+        let items = decode_pcb_items(raw_items)?;
+        Ok(SelectionMutationResult { items, summary })
     }
 
     pub async fn clear_selection_raw(&self) -> Result<Vec<prost_types::Any>, KiCadError> {
@@ -1150,9 +1144,11 @@ impl KiCadClient {
         }
     }
 
-    pub async fn clear_selection(&self) -> Result<SelectionSummary, KiCadError> {
-        let items = self.clear_selection_raw().await?;
-        Ok(summarize_selection(items))
+    pub async fn clear_selection(&self) -> Result<SelectionMutationResult, KiCadError> {
+        let raw_items = self.clear_selection_raw().await?;
+        let summary = summarize_selection(&raw_items);
+        let items = decode_pcb_items(raw_items)?;
+        Ok(SelectionMutationResult { items, summary })
     }
 
     pub async fn remove_from_selection_raw(
@@ -1187,9 +1183,11 @@ impl KiCadClient {
     pub async fn remove_from_selection(
         &self,
         item_ids: Vec<String>,
-    ) -> Result<SelectionSummary, KiCadError> {
-        let items = self.remove_from_selection_raw(item_ids).await?;
-        Ok(summarize_selection(items))
+    ) -> Result<SelectionMutationResult, KiCadError> {
+        let raw_items = self.remove_from_selection_raw(item_ids).await?;
+        let summary = summarize_selection(&raw_items);
+        let items = decode_pcb_items(raw_items)?;
+        Ok(SelectionMutationResult { items, summary })
     }
 
     pub async fn get_pad_netlist(&self) -> Result<Vec<PadNetEntry>, KiCadError> {
@@ -1846,7 +1844,7 @@ impl KiCadClient {
     }
 
     /// Serializes current selection to KiCad's string format.
-    pub async fn get_selection_as_string(&self) -> Result<String, KiCadError> {
+    pub async fn get_selection_as_string(&self) -> Result<SelectionStringDump, KiCadError> {
         let command = common_commands::SaveSelectionToString {};
 
         let response = self
@@ -1854,7 +1852,10 @@ impl KiCadClient {
             .await?;
         let payload: common_commands::SavedSelectionResponse =
             envelope::unpack_any(&response, RES_SAVED_SELECTION_RESPONSE)?;
-        Ok(payload.contents)
+        Ok(SelectionStringDump {
+            ids: payload.ids.into_iter().map(|id| id.value).collect(),
+            contents: payload.contents,
+        })
     }
 
     pub async fn get_items_by_id_raw(
@@ -2381,10 +2382,10 @@ fn map_merge_mode_to_proto(value: MapMergeMode) -> i32 {
     }
 }
 
-fn summarize_selection(items: Vec<prost_types::Any>) -> SelectionSummary {
+fn summarize_selection(items: &[prost_types::Any]) -> SelectionSummary {
     let mut counts = BTreeMap::<String, usize>::new();
 
-    for item in &items {
+    for item in items {
         let entry = counts.entry(item.type_url.clone()).or_insert(0);
         *entry += 1;
     }
@@ -3062,10 +3063,71 @@ fn map_via_type(value: i32) -> PcbViaType {
     }
 }
 
-fn map_via_layers(pad_stack: Option<board_types::PadStack>) -> Option<PcbViaLayers> {
+fn map_lock_state(value: i32) -> ItemLockState {
+    match common_types::LockedState::try_from(value) {
+        Ok(common_types::LockedState::LsUnlocked) => ItemLockState::Unlocked,
+        Ok(common_types::LockedState::LsLocked) => ItemLockState::Locked,
+        _ => ItemLockState::Unknown(value),
+    }
+}
+
+fn map_padstack_drill(drill: board_types::DrillProperties) -> PcbPadstackDrill {
+    let shape = board_types::DrillShape::try_from(drill.shape)
+        .map(|value| value.as_str_name().to_string())
+        .unwrap_or_else(|_| format!("UNKNOWN({})", drill.shape));
+    let capped = board_types::ViaDrillCappingMode::try_from(drill.capped)
+        .map(|value| value.as_str_name().to_string())
+        .unwrap_or_else(|_| format!("UNKNOWN({})", drill.capped));
+    let filled = board_types::ViaDrillFillingMode::try_from(drill.filled)
+        .map(|value| value.as_str_name().to_string())
+        .unwrap_or_else(|_| format!("UNKNOWN({})", drill.filled));
+
+    PcbPadstackDrill {
+        start_layer: layer_to_model(drill.start_layer),
+        end_layer: layer_to_model(drill.end_layer),
+        diameter_nm: drill.diameter.map(map_vector2_nm),
+        shape: Some(shape),
+        capped: Some(capped),
+        filled: Some(filled),
+    }
+}
+
+fn map_pad_stack(pad_stack: Option<&board_types::PadStack>) -> Option<PcbPadStack> {
     let pad_stack = pad_stack?;
 
-    let (drill_start_layer, drill_end_layer) = if let Some(drill) = pad_stack.drill {
+    let stack_type = board_types::PadStackType::try_from(pad_stack.r#type)
+        .map(|value| value.as_str_name().to_string())
+        .unwrap_or_else(|_| format!("UNKNOWN({})", pad_stack.r#type));
+    let unconnected_layer_removal =
+        board_types::UnconnectedLayerRemoval::try_from(pad_stack.unconnected_layer_removal)
+            .map(|value| value.as_str_name().to_string())
+            .unwrap_or_else(|_| format!("UNKNOWN({})", pad_stack.unconnected_layer_removal));
+
+    Some(PcbPadStack {
+        stack_type: Some(stack_type),
+        layers: pad_stack
+            .layers
+            .iter()
+            .copied()
+            .map(layer_to_model)
+            .collect(),
+        drill: pad_stack.drill.map(map_padstack_drill),
+        unconnected_layer_removal: Some(unconnected_layer_removal),
+        copper_layer_count: pad_stack.copper_layers.len(),
+        has_front_outer_layers: pad_stack.front_outer_layers.is_some(),
+        has_back_outer_layers: pad_stack.back_outer_layers.is_some(),
+        has_zone_settings: pad_stack.zone_settings.is_some(),
+        secondary_drill: pad_stack.secondary_drill.map(map_padstack_drill),
+        tertiary_drill: pad_stack.tertiary_drill.map(map_padstack_drill),
+        has_front_post_machining: pad_stack.front_post_machining.is_some(),
+        has_back_post_machining: pad_stack.back_post_machining.is_some(),
+    })
+}
+
+fn map_via_layers(pad_stack: Option<&board_types::PadStack>) -> Option<PcbViaLayers> {
+    let pad_stack = pad_stack?;
+
+    let (drill_start_layer, drill_end_layer) = if let Some(drill) = pad_stack.drill.as_ref() {
         (
             Some(layer_to_model(drill.start_layer)),
             Some(layer_to_model(drill.end_layer)),
@@ -3075,10 +3137,149 @@ fn map_via_layers(pad_stack: Option<board_types::PadStack>) -> Option<PcbViaLaye
     };
 
     Some(PcbViaLayers {
-        padstack_layers: pad_stack.layers.into_iter().map(layer_to_model).collect(),
+        padstack_layers: pad_stack
+            .layers
+            .iter()
+            .copied()
+            .map(layer_to_model)
+            .collect(),
         drill_start_layer,
         drill_end_layer,
     })
+}
+
+fn map_text_attributes(
+    attributes: Option<common_types::TextAttributes>,
+) -> Option<PcbTextAttributes> {
+    let attributes = attributes?;
+    let font_name = (!attributes.font_name.is_empty()).then_some(attributes.font_name);
+    let horizontal_alignment =
+        common_types::HorizontalAlignment::try_from(attributes.horizontal_alignment)
+            .map(|value| value.as_str_name().to_string())
+            .ok();
+    let vertical_alignment =
+        common_types::VerticalAlignment::try_from(attributes.vertical_alignment)
+            .map(|value| value.as_str_name().to_string())
+            .ok();
+
+    Some(PcbTextAttributes {
+        font_name,
+        horizontal_alignment,
+        vertical_alignment,
+        stroke_width_nm: map_optional_distance_nm(attributes.stroke_width),
+        italic: attributes.italic,
+        bold: attributes.bold,
+        underlined: attributes.underlined,
+        mirrored: attributes.mirrored,
+        multiline: attributes.multiline,
+        keep_upright: attributes.keep_upright,
+        size_nm: attributes.size.map(map_vector2_nm),
+    })
+}
+
+fn map_graphic_shape_geometry(
+    shape: Option<&common_types::GraphicShape>,
+) -> Option<PcbGraphicShapeGeometry> {
+    let geometry = shape?.geometry.as_ref()?;
+    match geometry {
+        common_types::graphic_shape::Geometry::Segment(segment) => {
+            Some(PcbGraphicShapeGeometry::Segment {
+                start_nm: segment.start.map(map_vector2_nm),
+                end_nm: segment.end.map(map_vector2_nm),
+            })
+        }
+        common_types::graphic_shape::Geometry::Rectangle(rect) => {
+            Some(PcbGraphicShapeGeometry::Rectangle {
+                top_left_nm: rect.top_left.map(map_vector2_nm),
+                bottom_right_nm: rect.bottom_right.map(map_vector2_nm),
+                corner_radius_nm: map_optional_distance_nm(rect.corner_radius),
+            })
+        }
+        common_types::graphic_shape::Geometry::Arc(arc) => Some(PcbGraphicShapeGeometry::Arc {
+            start_nm: arc.start.map(map_vector2_nm),
+            mid_nm: arc.mid.map(map_vector2_nm),
+            end_nm: arc.end.map(map_vector2_nm),
+        }),
+        common_types::graphic_shape::Geometry::Circle(circle) => {
+            Some(PcbGraphicShapeGeometry::Circle {
+                center_nm: circle.center.map(map_vector2_nm),
+                radius_point_nm: circle.radius_point.map(map_vector2_nm),
+            })
+        }
+        common_types::graphic_shape::Geometry::Polygon(polyset) => {
+            Some(PcbGraphicShapeGeometry::Polygon {
+                polygon_count: polyset.polygons.len(),
+            })
+        }
+        common_types::graphic_shape::Geometry::Bezier(bezier) => {
+            Some(PcbGraphicShapeGeometry::Bezier {
+                start_nm: bezier.start.map(map_vector2_nm),
+                control1_nm: bezier.control1.map(map_vector2_nm),
+                control2_nm: bezier.control2.map(map_vector2_nm),
+                end_nm: bezier.end.map(map_vector2_nm),
+            })
+        }
+    }
+}
+
+fn map_graphic_shape_kind(shape: Option<&common_types::GraphicShape>) -> Option<String> {
+    let geometry = shape?.geometry.as_ref()?;
+    Some(match geometry {
+        common_types::graphic_shape::Geometry::Segment(_) => "SEGMENT".to_string(),
+        common_types::graphic_shape::Geometry::Rectangle(_) => "RECTANGLE".to_string(),
+        common_types::graphic_shape::Geometry::Arc(_) => "ARC".to_string(),
+        common_types::graphic_shape::Geometry::Circle(_) => "CIRCLE".to_string(),
+        common_types::graphic_shape::Geometry::Polygon(_) => "POLYGON".to_string(),
+        common_types::graphic_shape::Geometry::Bezier(_) => "BEZIER".to_string(),
+    })
+}
+
+fn map_dimension_style(
+    style: Option<board_types::dimension::DimensionStyle>,
+) -> Option<PcbDimensionStyle> {
+    let style = style?;
+    match style {
+        board_types::dimension::DimensionStyle::Aligned(aligned) => {
+            Some(PcbDimensionStyle::Aligned {
+                start_nm: aligned.start.map(map_vector2_nm),
+                end_nm: aligned.end.map(map_vector2_nm),
+                height_nm: map_optional_distance_nm(aligned.height),
+                extension_height_nm: map_optional_distance_nm(aligned.extension_height),
+            })
+        }
+        board_types::dimension::DimensionStyle::Orthogonal(orthogonal) => {
+            let alignment = common_types::AxisAlignment::try_from(orthogonal.alignment)
+                .map(|value| value.as_str_name().to_string())
+                .unwrap_or_else(|_| format!("UNKNOWN({})", orthogonal.alignment));
+
+            Some(PcbDimensionStyle::Orthogonal {
+                start_nm: orthogonal.start.map(map_vector2_nm),
+                end_nm: orthogonal.end.map(map_vector2_nm),
+                height_nm: map_optional_distance_nm(orthogonal.height),
+                extension_height_nm: map_optional_distance_nm(orthogonal.extension_height),
+                alignment: Some(alignment),
+            })
+        }
+        board_types::dimension::DimensionStyle::Radial(radial) => Some(PcbDimensionStyle::Radial {
+            center_nm: radial.center.map(map_vector2_nm),
+            radius_point_nm: radial.radius_point.map(map_vector2_nm),
+            leader_length_nm: map_optional_distance_nm(radial.leader_length),
+        }),
+        board_types::dimension::DimensionStyle::Leader(leader) => {
+            let border_style = board_types::DimensionTextBorderStyle::try_from(leader.border_style)
+                .map(|value| value.as_str_name().to_string())
+                .unwrap_or_else(|_| format!("UNKNOWN({})", leader.border_style));
+            Some(PcbDimensionStyle::Leader {
+                start_nm: leader.start.map(map_vector2_nm),
+                end_nm: leader.end.map(map_vector2_nm),
+                border_style: Some(border_style),
+            })
+        }
+        board_types::dimension::DimensionStyle::Center(center) => Some(PcbDimensionStyle::Center {
+            center_nm: center.center.map(map_vector2_nm),
+            end_nm: center.end.map(map_vector2_nm),
+        }),
+    }
 }
 
 fn map_pad_type(value: i32) -> PcbPadType {
@@ -3113,6 +3314,7 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
             start_nm: track.start.map(map_vector2_nm),
             end_nm: track.end.map(map_vector2_nm),
             width_nm: map_optional_distance_nm(track.width),
+            locked: map_lock_state(track.locked),
             layer: layer_to_model(track.layer),
             net: map_optional_net(track.net),
         }));
@@ -3126,6 +3328,7 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
             mid_nm: arc.mid.map(map_vector2_nm),
             end_nm: arc.end.map(map_vector2_nm),
             width_nm: map_optional_distance_nm(arc.width),
+            locked: map_lock_state(arc.locked),
             layer: layer_to_model(arc.layer),
             net: map_optional_net(arc.net),
         }));
@@ -3137,7 +3340,9 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
             id: via.id.map(|id| id.value),
             position_nm: via.position.map(map_vector2_nm),
             via_type: map_via_type(via.r#type),
-            layers: map_via_layers(via.pad_stack),
+            locked: map_lock_state(via.locked),
+            layers: map_via_layers(via.pad_stack.as_ref()),
+            pad_stack: map_pad_stack(via.pad_stack.as_ref()),
             net: map_optional_net(via.net),
         }));
     }
@@ -3154,6 +3359,32 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
             .and_then(|board_text| board_text.text.as_ref())
             .map(|text| text.text.clone())
             .filter(|value| !value.is_empty());
+        let value = footprint
+            .value_field
+            .as_ref()
+            .and_then(|field| field.text.as_ref())
+            .and_then(|board_text| board_text.text.as_ref())
+            .map(|text| text.text.clone())
+            .filter(|value| !value.is_empty());
+        let datasheet = footprint
+            .datasheet_field
+            .as_ref()
+            .and_then(|field| field.text.as_ref())
+            .and_then(|board_text| board_text.text.as_ref())
+            .map(|text| text.text.clone())
+            .filter(|value| !value.is_empty());
+        let description = footprint
+            .description_field
+            .as_ref()
+            .and_then(|field| field.text.as_ref())
+            .and_then(|board_text| board_text.text.as_ref())
+            .map(|text| text.text.clone())
+            .filter(|value| !value.is_empty());
+        let definition_item_count = footprint
+            .definition
+            .as_ref()
+            .map(|definition| definition.items.len())
+            .unwrap_or(0);
         let pad_count = footprint
             .definition
             .as_ref()
@@ -3165,6 +3396,27 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
                     .count()
             })
             .unwrap_or(0);
+        let symbol_sheet_name = (!footprint.symbol_sheet_name.is_empty())
+            .then_some(footprint.symbol_sheet_name.clone());
+        let symbol_sheet_filename = (!footprint.symbol_sheet_filename.is_empty())
+            .then_some(footprint.symbol_sheet_filename.clone());
+        let symbol_footprint_filters = (!footprint.symbol_footprint_filters.is_empty())
+            .then_some(footprint.symbol_footprint_filters.clone());
+        let has_symbol_path = footprint.symbol_path.is_some();
+        let symbol_link = if has_symbol_path
+            || symbol_sheet_name.is_some()
+            || symbol_sheet_filename.is_some()
+            || symbol_footprint_filters.is_some()
+        {
+            Some(PcbFootprintSymbolLink {
+                has_symbol_path,
+                sheet_name: symbol_sheet_name,
+                sheet_filename: symbol_sheet_filename,
+                footprint_filters: symbol_footprint_filters,
+            })
+        } else {
+            None
+        };
 
         return Ok(PcbItem::Footprint(PcbFootprint {
             id: footprint.id.map(|id| id.value),
@@ -3172,17 +3424,42 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
             position_nm: footprint.position.map(map_vector2_nm),
             orientation_deg: footprint.orientation.map(|angle| angle.value_degrees),
             layer: layer_to_model(footprint.layer),
+            locked: map_lock_state(footprint.locked),
+            value,
+            datasheet,
+            description,
+            has_attributes: footprint.attributes.is_some(),
+            has_overrides: footprint.overrides.is_some(),
+            has_definition: footprint.definition.is_some(),
+            definition_item_count,
+            symbol_link,
             pad_count,
         }));
     }
 
     if item.type_url == envelope::type_url("kiapi.board.types.Pad") {
         let pad = decode_any::<board_types::Pad>(&item, "kiapi.board.types.Pad")?;
+        let symbol_pin = pad.symbol_pin.map(|pin| {
+            let pin_type = common_types::ElectricalPinType::try_from(pin.r#type)
+                .map(|value| value.as_str_name().to_string())
+                .unwrap_or_else(|_| format!("UNKNOWN({})", pin.r#type));
+            PcbSymbolPinInfo {
+                name: pin.name,
+                pin_type: Some(pin_type),
+                no_connect: pin.no_connect,
+            }
+        });
         return Ok(PcbItem::Pad(PcbPad {
             id: pad.id.map(|id| id.value),
+            locked: map_lock_state(pad.locked),
             number: pad.number,
             pad_type: map_pad_type(pad.r#type),
             position_nm: pad.position.map(map_vector2_nm),
+            pad_stack: map_pad_stack(pad.pad_stack.as_ref()),
+            copper_clearance_override_nm: map_optional_distance_nm(pad.copper_clearance_override),
+            pad_to_die_length_nm: map_optional_distance_nm(pad.pad_to_die_length),
+            pad_to_die_delay_as: pad.pad_to_die_delay.map(|value| value.value_as),
+            symbol_pin,
             net: map_optional_net(pad.net),
         }));
     }
@@ -3192,35 +3469,97 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
             &item,
             "kiapi.board.types.BoardGraphicShape",
         )?;
-        let geometry_kind = shape
+        let geometry_kind = map_graphic_shape_kind(shape.shape.as_ref());
+        let geometry = map_graphic_shape_geometry(shape.shape.as_ref());
+        let stroke_width_nm = shape
             .shape
             .as_ref()
-            .and_then(|graphic| graphic.geometry.as_ref())
-            .map(|value| format!("{value:?}"));
+            .and_then(|graphic| graphic.attributes.as_ref())
+            .and_then(|attrs| attrs.stroke.as_ref())
+            .and_then(|stroke| stroke.width)
+            .map(|width| width.value_nm);
+        let stroke_style = shape
+            .shape
+            .as_ref()
+            .and_then(|graphic| graphic.attributes.as_ref())
+            .and_then(|attrs| attrs.stroke.as_ref())
+            .map(|stroke| {
+                common_types::StrokeLineStyle::try_from(stroke.style)
+                    .map(|value| value.as_str_name().to_string())
+                    .unwrap_or_else(|_| format!("UNKNOWN({})", stroke.style))
+            });
+        let fill_type = shape
+            .shape
+            .as_ref()
+            .and_then(|graphic| graphic.attributes.as_ref())
+            .and_then(|attrs| attrs.fill.as_ref())
+            .map(|fill| {
+                common_types::GraphicFillType::try_from(fill.fill_type)
+                    .map(|value| value.as_str_name().to_string())
+                    .unwrap_or_else(|_| format!("UNKNOWN({})", fill.fill_type))
+            });
         return Ok(PcbItem::BoardGraphicShape(PcbBoardGraphicShape {
             id: shape.id.map(|id| id.value),
             layer: layer_to_model(shape.layer),
+            locked: map_lock_state(shape.locked),
             net: map_optional_net(shape.net),
             geometry_kind,
+            geometry,
+            stroke_width_nm,
+            stroke_style,
+            fill_type,
         }));
     }
 
     if item.type_url == envelope::type_url("kiapi.board.types.BoardText") {
         let text = decode_any::<board_types::BoardText>(&item, "kiapi.board.types.BoardText")?;
+        let (body, position_nm, hyperlink, attributes) = if let Some(value) = text.text {
+            let hyperlink = (!value.hyperlink.is_empty()).then_some(value.hyperlink.clone());
+            let body = (!value.text.is_empty()).then_some(value.text.clone());
+            (
+                body,
+                value.position.map(map_vector2_nm),
+                hyperlink,
+                map_text_attributes(value.attributes),
+            )
+        } else {
+            (None, None, None, None)
+        };
+
         return Ok(PcbItem::BoardText(PcbBoardText {
             id: text.id.map(|id| id.value),
             layer: layer_to_model(text.layer),
-            text: text.text.map(|value| value.text),
+            text: body,
+            position_nm,
+            hyperlink,
+            attributes,
+            knockout: text.knockout,
+            locked: map_lock_state(text.locked),
         }));
     }
 
     if item.type_url == envelope::type_url("kiapi.board.types.BoardTextBox") {
         let textbox =
             decode_any::<board_types::BoardTextBox>(&item, "kiapi.board.types.BoardTextBox")?;
+        let (body, top_left_nm, bottom_right_nm, attributes) = if let Some(value) = textbox.textbox
+        {
+            (
+                (!value.text.is_empty()).then_some(value.text.clone()),
+                value.top_left.map(map_vector2_nm),
+                value.bottom_right.map(map_vector2_nm),
+                map_text_attributes(value.attributes),
+            )
+        } else {
+            (None, None, None, None)
+        };
         return Ok(PcbItem::BoardTextBox(PcbBoardTextBox {
             id: textbox.id.map(|id| id.value),
             layer: layer_to_model(textbox.layer),
-            text: textbox.textbox.map(|value| value.text),
+            text: body,
+            top_left_nm,
+            bottom_right_nm,
+            attributes,
+            locked: map_lock_state(textbox.locked),
         }));
     }
 
@@ -3239,23 +3578,109 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
 
     if item.type_url == envelope::type_url("kiapi.board.types.Zone") {
         let zone = decode_any::<board_types::Zone>(&item, "kiapi.board.types.Zone")?;
+        let has_copper_settings = matches!(
+            zone.settings,
+            Some(board_types::zone::Settings::CopperSettings(_))
+        );
+        let has_rule_area_settings = matches!(
+            zone.settings,
+            Some(board_types::zone::Settings::RuleAreaSettings(_))
+        );
+        let border_style = zone.border.as_ref().map(|border| {
+            board_types::ZoneBorderStyle::try_from(border.style)
+                .map(|value| value.as_str_name().to_string())
+                .unwrap_or_else(|_| format!("UNKNOWN({})", border.style))
+        });
+        let border_pitch_nm = zone
+            .border
+            .as_ref()
+            .and_then(|border| map_optional_distance_nm(border.pitch));
+        let layer_properties = zone
+            .layer_properties
+            .iter()
+            .map(|entry| PcbZoneLayerProperty {
+                layer: layer_to_model(entry.layer),
+                hatching_offset_nm: entry.hatching_offset.map(map_vector2_nm),
+            })
+            .collect::<Vec<_>>();
+        let layers = zone
+            .layers
+            .iter()
+            .copied()
+            .map(layer_to_model)
+            .collect::<Vec<_>>();
+
         return Ok(PcbItem::Zone(PcbZone {
             id: zone.id.map(|id| id.value),
             name: zone.name,
             zone_type: map_zone_type(zone.r#type),
+            layers,
             layer_count: zone.layers.len(),
+            priority: zone.priority,
+            locked: map_lock_state(zone.locked),
             filled: zone.filled,
             polygon_count: zone.filled_polygons.len(),
+            outline_polygon_count: zone.outline.map_or(0, |outline| outline.polygons.len()),
+            has_copper_settings,
+            has_rule_area_settings,
+            border_style,
+            border_pitch_nm,
+            layer_properties,
         }));
     }
 
     if item.type_url == envelope::type_url("kiapi.board.types.Dimension") {
         let dimension = decode_any::<board_types::Dimension>(&item, "kiapi.board.types.Dimension")?;
+        let style_kind = dimension.dimension_style.as_ref().map(|value| match value {
+            board_types::dimension::DimensionStyle::Aligned(_) => "ALIGNED".to_string(),
+            board_types::dimension::DimensionStyle::Orthogonal(_) => "ORTHOGONAL".to_string(),
+            board_types::dimension::DimensionStyle::Radial(_) => "RADIAL".to_string(),
+            board_types::dimension::DimensionStyle::Leader(_) => "LEADER".to_string(),
+            board_types::dimension::DimensionStyle::Center(_) => "CENTER".to_string(),
+        });
+        let style = map_dimension_style(dimension.dimension_style);
+        let override_text =
+            (!dimension.override_text.is_empty()).then_some(dimension.override_text);
+        let prefix = (!dimension.prefix.is_empty()).then_some(dimension.prefix);
+        let suffix = (!dimension.suffix.is_empty()).then_some(dimension.suffix);
+        let unit = board_types::DimensionUnit::try_from(dimension.unit)
+            .map(|value| value.as_str_name().to_string())
+            .unwrap_or_else(|_| format!("UNKNOWN({})", dimension.unit));
+        let unit_format = board_types::DimensionUnitFormat::try_from(dimension.unit_format)
+            .map(|value| value.as_str_name().to_string())
+            .unwrap_or_else(|_| format!("UNKNOWN({})", dimension.unit_format));
+        let arrow_direction =
+            board_types::DimensionArrowDirection::try_from(dimension.arrow_direction)
+                .map(|value| value.as_str_name().to_string())
+                .unwrap_or_else(|_| format!("UNKNOWN({})", dimension.arrow_direction));
+        let precision = board_types::DimensionPrecision::try_from(dimension.precision)
+            .map(|value| value.as_str_name().to_string())
+            .unwrap_or_else(|_| format!("UNKNOWN({})", dimension.precision));
+        let text_position = board_types::DimensionTextPosition::try_from(dimension.text_position)
+            .map(|value| value.as_str_name().to_string())
+            .unwrap_or_else(|_| format!("UNKNOWN({})", dimension.text_position));
+
         return Ok(PcbItem::Dimension(PcbDimension {
             id: dimension.id.map(|id| id.value),
             layer: layer_to_model(dimension.layer),
+            locked: map_lock_state(dimension.locked),
             text: dimension.text.map(|value| value.text),
-            style_kind: dimension.dimension_style.map(|value| format!("{value:?}")),
+            style_kind,
+            style,
+            override_text_enabled: dimension.override_text_enabled,
+            override_text,
+            prefix,
+            suffix,
+            unit: Some(unit),
+            unit_format: Some(unit_format),
+            arrow_direction: Some(arrow_direction),
+            precision: Some(precision),
+            suppress_trailing_zeroes: dimension.suppress_trailing_zeroes,
+            line_thickness_nm: map_optional_distance_nm(dimension.line_thickness),
+            arrow_length_nm: map_optional_distance_nm(dimension.arrow_length),
+            extension_offset_nm: map_optional_distance_nm(dimension.extension_offset),
+            text_position: Some(text_position),
+            keep_text_aligned: dimension.keep_text_aligned,
         }));
     }
 
@@ -3265,6 +3690,7 @@ fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
             id: group.id.map(|id| id.value),
             name: group.name,
             item_count: group.items.len(),
+            item_ids: group.items.into_iter().map(|item| item.value).collect(),
         }));
     }
 
@@ -3458,7 +3884,7 @@ fn format_via_selection_detail(via: board_types::Via) -> String {
     let via_type = board_types::ViaType::try_from(via.r#type)
         .map(|value| value.as_str_name().to_string())
         .unwrap_or_else(|_| format!("UNKNOWN({})", via.r#type));
-    let layers = map_via_layers(via.pad_stack);
+    let layers = map_via_layers(via.pad_stack.as_ref());
     let pad_layers = layers
         .as_ref()
         .map(|row| format_layer_names(&row.padstack_layers))
@@ -4297,7 +4723,7 @@ mod tests {
             },
         ];
 
-        let summary = summarize_selection(items);
+        let summary = summarize_selection(&items);
         assert_eq!(summary.total_items, 3);
         assert_eq!(summary.type_url_counts.len(), 2);
         assert_eq!(summary.type_url_counts[0].count, 2);
@@ -4338,6 +4764,35 @@ mod tests {
         assert!(detail.contains("track id=track-id"));
         assert!(detail.contains("layer=BL_F_Cu"));
         assert!(detail.contains("net=12:GND"));
+    }
+
+    #[test]
+    fn decode_pcb_item_maps_track_locked_state() {
+        let track = crate::proto::kiapi::board::types::Track {
+            id: Some(crate::proto::kiapi::common::types::Kiid {
+                value: "track-id".to_string(),
+            }),
+            start: None,
+            end: None,
+            width: None,
+            locked: crate::proto::kiapi::common::types::LockedState::LsLocked as i32,
+            layer: crate::proto::kiapi::board::types::BoardLayer::BlFCu as i32,
+            net: None,
+        };
+
+        let item = prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.types.Track"),
+            value: track.encode_to_vec(),
+        };
+
+        let parsed = decode_pcb_item(item).expect("track payload should decode");
+        match parsed {
+            PcbItem::Track(track) => {
+                assert_eq!(track.id.as_deref(), Some("track-id"));
+                assert_eq!(track.locked, crate::model::board::ItemLockState::Locked);
+            }
+            other => panic!("expected track item, got {other:?}"),
+        }
     }
 
     #[test]
@@ -4439,6 +4894,111 @@ mod tests {
         assert!(detail.contains("type=VT_THROUGH"));
         assert!(detail.contains("pad_layers=BL_F_Cu,BL_B_Cu"));
         assert!(detail.contains("drill_span=BL_F_Cu->BL_B_Cu"));
+    }
+
+    #[test]
+    fn decode_pcb_item_maps_group_item_ids() {
+        let group = crate::proto::kiapi::board::types::Group {
+            id: Some(crate::proto::kiapi::common::types::Kiid {
+                value: "group-id".to_string(),
+            }),
+            name: "group-a".to_string(),
+            items: vec![
+                crate::proto::kiapi::common::types::Kiid {
+                    value: "item-1".to_string(),
+                },
+                crate::proto::kiapi::common::types::Kiid {
+                    value: "item-2".to_string(),
+                },
+            ],
+        };
+
+        let item = prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.types.Group"),
+            value: group.encode_to_vec(),
+        };
+
+        let parsed = decode_pcb_item(item).expect("group payload should decode");
+        match parsed {
+            PcbItem::Group(group) => {
+                assert_eq!(group.id.as_deref(), Some("group-id"));
+                assert_eq!(group.item_count, 2);
+                assert_eq!(
+                    group.item_ids,
+                    vec!["item-1".to_string(), "item-2".to_string()]
+                );
+            }
+            other => panic!("expected group item, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn decode_pcb_item_maps_board_text_attributes() {
+        let text = crate::proto::kiapi::board::types::BoardText {
+            id: Some(crate::proto::kiapi::common::types::Kiid {
+                value: "text-id".to_string(),
+            }),
+            text: Some(crate::proto::kiapi::common::types::Text {
+                position: Some(crate::proto::kiapi::common::types::Vector2 {
+                    x_nm: 123,
+                    y_nm: 456,
+                }),
+                attributes: Some(crate::proto::kiapi::common::types::TextAttributes {
+                    font_name: "KiCad Font".to_string(),
+                    horizontal_alignment:
+                        crate::proto::kiapi::common::types::HorizontalAlignment::HaCenter as i32,
+                    vertical_alignment: crate::proto::kiapi::common::types::VerticalAlignment::VaTop
+                        as i32,
+                    stroke_width: Some(crate::proto::kiapi::common::types::Distance {
+                        value_nm: 42,
+                    }),
+                    italic: true,
+                    bold: false,
+                    underlined: true,
+                    mirrored: false,
+                    multiline: true,
+                    keep_upright: true,
+                    size: Some(crate::proto::kiapi::common::types::Vector2 {
+                        x_nm: 777,
+                        y_nm: 888,
+                    }),
+                    ..Default::default()
+                }),
+                text: "HELLO".to_string(),
+                hyperlink: "https://example.com".to_string(),
+            }),
+            layer: crate::proto::kiapi::board::types::BoardLayer::BlFSilkS as i32,
+            knockout: true,
+            locked: crate::proto::kiapi::common::types::LockedState::LsUnlocked as i32,
+        };
+
+        let item = prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.types.BoardText"),
+            value: text.encode_to_vec(),
+        };
+
+        let parsed = decode_pcb_item(item).expect("board text payload should decode");
+        match parsed {
+            PcbItem::BoardText(text) => {
+                assert_eq!(text.id.as_deref(), Some("text-id"));
+                assert_eq!(text.text.as_deref(), Some("HELLO"));
+                assert_eq!(text.hyperlink.as_deref(), Some("https://example.com"));
+                assert_eq!(text.knockout, true);
+                let attributes = text.attributes.expect("text attributes should map");
+                assert_eq!(attributes.font_name.as_deref(), Some("KiCad Font"));
+                assert_eq!(
+                    attributes.horizontal_alignment.as_deref(),
+                    Some("HA_CENTER")
+                );
+                assert_eq!(attributes.vertical_alignment.as_deref(), Some("VA_TOP"));
+                assert_eq!(attributes.stroke_width_nm, Some(42));
+                assert_eq!(
+                    attributes.size_nm.map(|v| (v.x_nm, v.y_nm)),
+                    Some((777, 888))
+                );
+            }
+            other => panic!("expected board text item, got {other:?}"),
+        }
     }
 
     #[test]

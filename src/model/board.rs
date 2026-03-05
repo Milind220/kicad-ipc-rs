@@ -386,12 +386,144 @@ pub enum PcbZoneType {
     Unknown(i32),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ItemLockState {
+    Unlocked,
+    Locked,
+    Unknown(i32),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbPadstackDrill {
+    pub start_layer: BoardLayerInfo,
+    pub end_layer: BoardLayerInfo,
+    pub diameter_nm: Option<Vector2Nm>,
+    pub shape: Option<String>,
+    pub capped: Option<String>,
+    pub filled: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbPadStack {
+    pub stack_type: Option<String>,
+    pub layers: Vec<BoardLayerInfo>,
+    pub drill: Option<PcbPadstackDrill>,
+    pub unconnected_layer_removal: Option<String>,
+    pub copper_layer_count: usize,
+    pub has_front_outer_layers: bool,
+    pub has_back_outer_layers: bool,
+    pub has_zone_settings: bool,
+    pub secondary_drill: Option<PcbPadstackDrill>,
+    pub tertiary_drill: Option<PcbPadstackDrill>,
+    pub has_front_post_machining: bool,
+    pub has_back_post_machining: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbSymbolPinInfo {
+    pub name: String,
+    pub pin_type: Option<String>,
+    pub no_connect: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbTextAttributes {
+    pub font_name: Option<String>,
+    pub horizontal_alignment: Option<String>,
+    pub vertical_alignment: Option<String>,
+    pub stroke_width_nm: Option<i64>,
+    pub italic: bool,
+    pub bold: bool,
+    pub underlined: bool,
+    pub mirrored: bool,
+    pub multiline: bool,
+    pub keep_upright: bool,
+    pub size_nm: Option<Vector2Nm>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PcbGraphicShapeGeometry {
+    Segment {
+        start_nm: Option<Vector2Nm>,
+        end_nm: Option<Vector2Nm>,
+    },
+    Rectangle {
+        top_left_nm: Option<Vector2Nm>,
+        bottom_right_nm: Option<Vector2Nm>,
+        corner_radius_nm: Option<i64>,
+    },
+    Arc {
+        start_nm: Option<Vector2Nm>,
+        mid_nm: Option<Vector2Nm>,
+        end_nm: Option<Vector2Nm>,
+    },
+    Circle {
+        center_nm: Option<Vector2Nm>,
+        radius_point_nm: Option<Vector2Nm>,
+    },
+    Polygon {
+        polygon_count: usize,
+    },
+    Bezier {
+        start_nm: Option<Vector2Nm>,
+        control1_nm: Option<Vector2Nm>,
+        control2_nm: Option<Vector2Nm>,
+        end_nm: Option<Vector2Nm>,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbZoneLayerProperty {
+    pub layer: BoardLayerInfo,
+    pub hatching_offset_nm: Option<Vector2Nm>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PcbDimensionStyle {
+    Aligned {
+        start_nm: Option<Vector2Nm>,
+        end_nm: Option<Vector2Nm>,
+        height_nm: Option<i64>,
+        extension_height_nm: Option<i64>,
+    },
+    Orthogonal {
+        start_nm: Option<Vector2Nm>,
+        end_nm: Option<Vector2Nm>,
+        height_nm: Option<i64>,
+        extension_height_nm: Option<i64>,
+        alignment: Option<String>,
+    },
+    Radial {
+        center_nm: Option<Vector2Nm>,
+        radius_point_nm: Option<Vector2Nm>,
+        leader_length_nm: Option<i64>,
+    },
+    Leader {
+        start_nm: Option<Vector2Nm>,
+        end_nm: Option<Vector2Nm>,
+        border_style: Option<String>,
+    },
+    Center {
+        center_nm: Option<Vector2Nm>,
+        end_nm: Option<Vector2Nm>,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PcbFootprintSymbolLink {
+    pub has_symbol_path: bool,
+    pub sheet_name: Option<String>,
+    pub sheet_filename: Option<String>,
+    pub footprint_filters: Option<String>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PcbTrack {
     pub id: Option<String>,
     pub start_nm: Option<Vector2Nm>,
     pub end_nm: Option<Vector2Nm>,
     pub width_nm: Option<i64>,
+    pub locked: ItemLockState,
     pub layer: BoardLayerInfo,
     pub net: Option<BoardNet>,
 }
@@ -403,6 +535,7 @@ pub struct PcbArc {
     pub mid_nm: Option<Vector2Nm>,
     pub end_nm: Option<Vector2Nm>,
     pub width_nm: Option<i64>,
+    pub locked: ItemLockState,
     pub layer: BoardLayerInfo,
     pub net: Option<BoardNet>,
 }
@@ -412,7 +545,9 @@ pub struct PcbVia {
     pub id: Option<String>,
     pub position_nm: Option<Vector2Nm>,
     pub via_type: PcbViaType,
+    pub locked: ItemLockState,
     pub layers: Option<PcbViaLayers>,
+    pub pad_stack: Option<PcbPadStack>,
     pub net: Option<BoardNet>,
 }
 
@@ -423,15 +558,30 @@ pub struct PcbFootprint {
     pub position_nm: Option<Vector2Nm>,
     pub orientation_deg: Option<f64>,
     pub layer: BoardLayerInfo,
+    pub locked: ItemLockState,
+    pub value: Option<String>,
+    pub datasheet: Option<String>,
+    pub description: Option<String>,
+    pub has_attributes: bool,
+    pub has_overrides: bool,
+    pub has_definition: bool,
+    pub definition_item_count: usize,
+    pub symbol_link: Option<PcbFootprintSymbolLink>,
     pub pad_count: usize,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PcbPad {
     pub id: Option<String>,
+    pub locked: ItemLockState,
     pub number: String,
     pub pad_type: PcbPadType,
     pub position_nm: Option<Vector2Nm>,
+    pub pad_stack: Option<PcbPadStack>,
+    pub copper_clearance_override_nm: Option<i64>,
+    pub pad_to_die_length_nm: Option<i64>,
+    pub pad_to_die_delay_as: Option<i64>,
+    pub symbol_pin: Option<PcbSymbolPinInfo>,
     pub net: Option<BoardNet>,
 }
 
@@ -439,8 +589,13 @@ pub struct PcbPad {
 pub struct PcbBoardGraphicShape {
     pub id: Option<String>,
     pub layer: BoardLayerInfo,
+    pub locked: ItemLockState,
     pub net: Option<BoardNet>,
     pub geometry_kind: Option<String>,
+    pub geometry: Option<PcbGraphicShapeGeometry>,
+    pub stroke_width_nm: Option<i64>,
+    pub stroke_style: Option<String>,
+    pub fill_type: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -448,6 +603,11 @@ pub struct PcbBoardText {
     pub id: Option<String>,
     pub layer: BoardLayerInfo,
     pub text: Option<String>,
+    pub position_nm: Option<Vector2Nm>,
+    pub hyperlink: Option<String>,
+    pub attributes: Option<PcbTextAttributes>,
+    pub knockout: bool,
+    pub locked: ItemLockState,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -455,6 +615,10 @@ pub struct PcbBoardTextBox {
     pub id: Option<String>,
     pub layer: BoardLayerInfo,
     pub text: Option<String>,
+    pub top_left_nm: Option<Vector2Nm>,
+    pub bottom_right_nm: Option<Vector2Nm>,
+    pub attributes: Option<PcbTextAttributes>,
+    pub locked: ItemLockState,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -469,17 +633,42 @@ pub struct PcbZone {
     pub id: Option<String>,
     pub name: String,
     pub zone_type: PcbZoneType,
+    pub layers: Vec<BoardLayerInfo>,
     pub layer_count: usize,
+    pub priority: u32,
+    pub locked: ItemLockState,
     pub filled: bool,
     pub polygon_count: usize,
+    pub outline_polygon_count: usize,
+    pub has_copper_settings: bool,
+    pub has_rule_area_settings: bool,
+    pub border_style: Option<String>,
+    pub border_pitch_nm: Option<i64>,
+    pub layer_properties: Vec<PcbZoneLayerProperty>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PcbDimension {
     pub id: Option<String>,
     pub layer: BoardLayerInfo,
+    pub locked: ItemLockState,
     pub text: Option<String>,
     pub style_kind: Option<String>,
+    pub style: Option<PcbDimensionStyle>,
+    pub override_text_enabled: bool,
+    pub override_text: Option<String>,
+    pub prefix: Option<String>,
+    pub suffix: Option<String>,
+    pub unit: Option<String>,
+    pub unit_format: Option<String>,
+    pub arrow_direction: Option<String>,
+    pub precision: Option<String>,
+    pub suppress_trailing_zeroes: bool,
+    pub line_thickness_nm: Option<i64>,
+    pub arrow_length_nm: Option<i64>,
+    pub extension_offset_nm: Option<i64>,
+    pub text_position: Option<String>,
+    pub keep_text_aligned: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -487,6 +676,7 @@ pub struct PcbGroup {
     pub id: Option<String>,
     pub name: String,
     pub item_count: usize,
+    pub item_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

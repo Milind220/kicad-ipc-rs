@@ -594,32 +594,32 @@ fn run() -> Result<(), KiCadError> {
             }
         }
         Command::AddToSelection { item_ids } => {
-            let summary = client.add_to_selection(item_ids)?;
-            println!("selection_total={}", summary.total_items);
-            for entry in summary.type_url_counts {
+            let result = client.add_to_selection(item_ids)?;
+            println!("selection_total={}", result.summary.total_items);
+            for entry in result.summary.type_url_counts {
                 println!("type_url={} count={}", entry.type_url, entry.count);
             }
         }
         Command::RemoveFromSelection { item_ids } => {
-            let summary = client.remove_from_selection(item_ids)?;
-            println!("selection_total={}", summary.total_items);
-            for entry in summary.type_url_counts {
+            let result = client.remove_from_selection(item_ids)?;
+            println!("selection_total={}", result.summary.total_items);
+            for entry in result.summary.type_url_counts {
                 println!("type_url={} count={}", entry.type_url, entry.count);
             }
         }
         Command::ClearSelection => {
-            let summary = client.clear_selection()?;
-            println!("selection_total={}", summary.total_items);
+            let result = client.clear_selection()?;
+            println!("selection_total={}", result.summary.total_items);
         }
         Command::SelectionSummary => {
-            let summary = client.get_selection_summary()?;
+            let summary = client.get_selection_summary(Vec::new())?;
             println!("selection_total={}", summary.total_items);
             for entry in summary.type_url_counts {
                 println!("type_url={} count={}", entry.type_url, entry.count);
             }
         }
         Command::SelectionDetails => {
-            let details = client.get_selection_details()?;
+            let details = client.get_selection_details(Vec::new())?;
             println!("selection_total={}", details.len());
             for (index, item) in details.iter().enumerate() {
                 println!(
@@ -629,7 +629,7 @@ fn run() -> Result<(), KiCadError> {
             }
         }
         Command::SelectionRaw => {
-            let items = client.get_selection_raw()?;
+            let items = client.get_selection_raw(Vec::new())?;
             println!("selection_total={}", items.len());
             for (index, item) in items.iter().enumerate() {
                 println!(
@@ -851,8 +851,12 @@ fn run() -> Result<(), KiCadError> {
             println!("{content}");
         }
         Command::SelectionAsString => {
-            let content = client.get_selection_as_string()?;
-            println!("{content}");
+            let selection = client.get_selection_as_string()?;
+            println!("selection_id_count={}", selection.ids.len());
+            for id in selection.ids {
+                println!("id={id}");
+            }
+            println!("{}", selection.contents);
         }
         Command::Stackup => {
             let stackup = client.get_board_stackup()?;
