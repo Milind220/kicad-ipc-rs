@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9522f933.js";
+            window.path_to_searchindex_js = "searchindex-98fecffd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -188,6 +188,12 @@
 <li><code>KiCadClientBlocking</code> (<code>blocking</code> feature)</li>
 <li><code>KiCadError</code></li>
 <li>Typed models under <code>model::*</code></li>
+</ul>
+<p>Selection API notes:</p>
+<ul>
+<li><code>get_selection_*</code> methods now take <code>type_codes: Vec&lt;i32&gt;</code> (<code>Vec::new()</code> means no filter).</li>
+<li><code>add_to_selection</code>, <code>remove_from_selection</code>, <code>clear_selection</code> return <code>SelectionMutationResult</code> (decoded items + summary).</li>
+<li><code>get_selection_as_string</code> returns <code>SelectionStringDump</code> (<code>ids</code> + <code>contents</code>).</li>
 </ul>
 
                     </main>
