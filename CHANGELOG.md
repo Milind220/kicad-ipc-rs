@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/Milind220/kicad-ipc-rs/compare/v0.3.2...v0.4.0) - 2026-03-06
+
+### Fixed
+
+- reduce selection API lossiness in existing public methods ([#19](https://github.com/Milind220/kicad-ipc-rs/pull/19))
+
 ## [0.3.2](https://github.com/Milind220/kicad-ipc-rs/compare/v0.3.1...v0.3.2) - 2026-03-02
 
 ### Fixed
