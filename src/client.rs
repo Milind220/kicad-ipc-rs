@@ -4225,6 +4225,20 @@ fn ipc_path_from_uri(socket_uri: &str) -> Option<PathBuf> {
 
 fn is_missing_ipc_socket(socket_uri: &str) -> bool {
     if let Some(path) = ipc_path_from_uri(socket_uri) {
+        #[cfg(target_os = "windows")]
+        {
+            // On Windows, nng's ipc:// transport uses named pipes, not filesystem
+            // sockets. A path.exists() check is always false even when KiCad is
+            // running. Instead, probe the named pipe directly: a successful open
+            // or ERROR_PIPE_BUSY (231) both mean a server is listening.
+            let pipe_path = format!(r"\\.\pipe\{}", path.display());
+            return match std::fs::OpenOptions::new().read(true).open(&pipe_path) {
+                Ok(_) => false,
+                Err(e) => e.raw_os_error() != Some(231),
+            };
+        }
+
+        #[cfg(not(target_os = "windows"))]
         return !path.exists();
     }
 
