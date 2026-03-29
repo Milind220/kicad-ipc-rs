@@ -15,7 +15,6 @@ Beta. All KiCad v10.0.0 API commands are implemented and tested.
 
 - Async API (default): production-ready with full feature parity
 - Sync/blocking wrapper API (`feature = "blocking"`): production-ready, uses dedicated Tokio runtime thread
-
 ## Prerequisites
 
 - **Rust 1.70+** (edition 2021)
@@ -141,7 +140,6 @@ cargo run --example selection_deep_dump --features blocking
 ```
 
 See the [examples/](examples/) directory for full source.
-
 ## KiCad Version Compatibility
 
 This crate tracks KiCad releases. When KiCad updates their API, we update within a week. Currently supports KiCad 10.0.0.
