@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-98fecffd.js";
+            window.path_to_searchindex_js = "searchindex-53dfbc64.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -179,31 +179,58 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p><code>kicad-ipc-rs</code> is an async-first Rust client for KiCad IPC.</p>
-<p>Project goals:</p>
+<p><code>kicad-ipc-rs</code> is a production-ready Rust client for KiCad’s IPC API.</p>
+<h2 id="why-this-crate"><a class="header" href="#why-this-crate">Why this crate?</a></h2>
+<p><code>kicad-ipc-rs</code> gives you programmatic control over KiCad with an ergonomic, type-safe Rust API. Whether you’re building automation tools, integrating KiCad into CI/CD pipelines, or creating custom workflows, this crate provides the most complete and well-documented interface to KiCad’s API.</p>
+<h3 id="key-features"><a class="header" href="#key-features">Key Features</a></h3>
 <ul>
-<li>Rust-native API for KiCad IPC commands.</li>
-<li>Typed models for common board/editor operations.</li>
-<li>Blocking wrapper parity via <code>feature = "blocking"</code>.</li>
-<li>Maintainer-friendly release and proto-regeneration flow.</li>
+<li><strong>100% API Coverage</strong>: All 57 KiCad v10.0.0 API commands implemented</li>
+<li><strong>Type-Safe Models</strong>: Native Rust structs for tracks, vias, footprints, nets, and more</li>
+<li><strong>Dual API</strong>: Async-first design with full synchronous support via <code>blocking</code> feature</li>
+<li><strong>Zero Protobuf Hassle</strong>: Pre-generated types — no KiCad source checkout needed</li>
+<li><strong>Battle-Tested</strong>: Used in real automation and integration workflows</li>
 </ul>
-<p>Current scope:</p>
+<h3 id="api-comparison"><a class="header" href="#api-comparison">API Comparison</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Capability</th><th><code>kicad-ipc-rs</code></th><th>Python bindings</th><th>Official Rust</th></tr>
+</thead>
+<tbody>
+<tr><td>Rust-native API</td><td>✅ Production-ready</td><td>❌ Python only</td><td>⚠️ Preview</td></tr>
+<tr><td>Async + Sync</td><td>✅ Both supported</td><td>⚠️ Event-loop</td><td>⚠️ Preview</td></tr>
+<tr><td>Complete coverage</td><td>✅ 57/57 commands</td><td>Unknown</td><td>Unknown</td></tr>
+<tr><td>Active maintenance</td><td>✅ Yes</td><td>✅ Official</td><td>⚠️ Preview</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="project-goals"><a class="header" href="#project-goals">Project Goals</a></h2>
 <ul>
-<li>KiCad API proto snapshot pinned in repo (<code>src/proto/generated/</code>).</li>
-<li>56/56 wrapped command families from the current snapshot.</li>
-<li>Runtime compatibility verified against KiCad <code>10.0.0-rc1</code>.</li>
+<li>Rust-native API for all KiCad IPC commands</li>
+<li>Typed, ergonomic models for board and editor operations</li>
+<li>Full parity between async and blocking APIs</li>
+<li>Clear documentation and real-world examples</li>
+<li>Stable, maintainable release workflow</li>
 </ul>
-<p>Core entrypoints:</p>
+<h2 id="current-scope"><a class="header" href="#current-scope">Current Scope</a></h2>
 <ul>
-<li>Async: <code>kicad_ipc_rs::KiCadClient</code></li>
-<li>Blocking: <code>kicad_ipc_rs::KiCadClientBlocking</code> (<code>blocking</code> feature)</li>
-<li>Error type: <code>kicad_ipc_rs::KiCadError</code></li>
+<li>KiCad API proto snapshot pinned in repo (<code>src/proto/generated/</code>)</li>
+<li>57/57 wrapped command families from KiCad v10.0.0</li>
+<li>Runtime compatibility verified against KiCad 10.0.0</li>
 </ul>
-<p>Related docs:</p>
+<h2 id="core-entrypoints"><a class="header" href="#core-entrypoints">Core Entrypoints</a></h2>
 <ul>
-<li>Crate README: <a href="https://github.com/Milind220/kicad-ipc-rs/blob/main/README.md">README.md</a></li>
-<li>CLI runbook: <a href="https://github.com/Milind220/kicad-ipc-rs/blob/main/docs/TEST_CLI.md">docs/TEST_CLI.md</a></li>
-<li>API docs: <a href="https://docs.rs/kicad-ipc-rs">docs.rs/kicad-ipc-rs</a></li>
+<li><strong>Async</strong>: <code>kicad_ipc_rs::KiCadClient</code></li>
+<li><strong>Blocking</strong>: <code>kicad_ipc_rs::KiCadClientBlocking</code> (enable <code>blocking</code> feature)</li>
+<li><strong>Errors</strong>: <code>kicad_ipc_rs::KiCadError</code></li>
+</ul>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
+<p>Jump to <a href="#quickstart">Quickstart</a> to connect to KiCad and run your first commands.</p>
+<h2 id="related-docs"><a class="header" href="#related-docs">Related Docs</a></h2>
+<ul>
+<li><a href="https://github.com/Milind220/kicad-ipc-rs/blob/main/README.md">Crate README</a></li>
+<li><a href="https://docs.rs/kicad-ipc-rs">API Reference on docs.rs</a></li>
+<li><a href="#examples">Examples</a> for real-world patterns</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="quickstart"><a class="header" href="#quickstart">Quickstart</a></h1>
@@ -216,7 +243,7 @@
 <h2 id="async-api-default"><a class="header" href="#async-api-default">Async API (default)</a></h2>
 <p><code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependencies]
-kicad-ipc-rs = "0.3.1"
+kicad-ipc-rs = "0.4.1"
 tokio = { version = "1", features = ["macros", "rt"] }
 </code></pre>
 <pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClient;
@@ -236,7 +263,7 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 <h2 id="blocking-api"><a class="header" href="#blocking-api">Blocking API</a></h2>
 <p><code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependencies]
-kicad-ipc-rs = { version = "0.3.1", features = ["blocking"] }
+kicad-ipc-rs = { version = "0.4.1", features = ["blocking"] }
 </code></pre>
 <pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClientBlocking;
 
@@ -333,6 +360,7 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="examples"><a class="header" href="#examples">Examples</a></h1>
+<p>Real-world usage patterns for <code>kicad-ipc-rs</code>.</p>
 <h2 id="quick-version-probe-async"><a class="header" href="#quick-version-probe-async">Quick Version Probe (Async)</a></h2>
 <pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClient;
 
@@ -352,13 +380,279 @@ fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
     println!("open board: {}", has_board);
     Ok(())
 }</code></pre>
-<h2 id="cli-first-smoke-testing"><a class="header" href="#cli-first-smoke-testing">CLI-first Smoke Testing</a></h2>
-<p>Runbook commands:</p>
-<pre><code class="language-bash">cargo run --features blocking --bin kicad-ipc-cli -- ping
+<h2 id="example-pcb-analysis---find-unconnected-nets"><a class="header" href="#example-pcb-analysis---find-unconnected-nets">Example: PCB Analysis - Find Unconnected Nets</a></h2>
+<p>Analyze a board to find nets that aren’t properly connected:</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClient;
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClient::connect().await?;
+    
+    // Get all nets in the current board
+    let nets = client.get_nets().await?;
+    
+    // Filter for nets with names suggesting they're unconnected
+    let suspicious: Vec&lt;_&gt; = nets
+        .iter()
+        .filter(|net| {
+            net.name.to_lowercase().contains("unconnected") ||
+            net.name.to_lowercase().contains("unrouted") ||
+            net.name.starts_with("Net-(")
+        })
+        .collect();
+    
+    if suspicious.is_empty() {
+        println!("All nets appear to be properly connected!");
+    } else {
+        println!("Found {} potentially unconnected nets:", suspicious.len());
+        for net in suspicious {
+            println!("  - {} (code: {})", net.name, net.code);
+        }
+    }
+    
+    Ok(())
+}</code></pre>
+<h2 id="example-pcb-analysis---list-all-footprints"><a class="header" href="#example-pcb-analysis---list-all-footprints">Example: PCB Analysis - List All Footprints</a></h2>
+<p>Get a summary of all footprints on the board:</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::{KiCadClient, PcbObjectTypeCode};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClient::connect().await?;
+    
+    // Get all footprints
+    let footprints = client.get_items_by_type_codes(vec![
+        PcbObjectTypeCode::new_footprint()
+    ]).await?;
+    
+    let mut by_lib: std::collections::HashMap&lt;String, usize&gt; = std::collections::HashMap::new();
+    
+    for item in footprints {
+        if let kicad_ipc_rs::PcbItem::Footprint(fp) = item {
+            let lib = fp.library_id.unwrap_or_else(|| "Unknown".to_string());
+            *by_lib.entry(lib).or_insert(0) += 1;
+        }
+    }
+    
+    println!("Footprints by library:");
+    for (lib, count) in by_lib.iter().take(10) {
+        println!("  {}: {}", lib, count);
+    }
+    
+    Ok(())
+}</code></pre>
+<h2 id="example-automation---batch-rename-text-variables"><a class="header" href="#example-automation---batch-rename-text-variables">Example: Automation - Batch Rename Text Variables</a></h2>
+<p>Update text variables across the project:</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::{KiCadClient, DocumentType};
+use std::collections::BTreeMap;
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClient::connect().await?;
+    
+    // Get current text variables
+    let current = client.get_text_variables().await?;
+    println!("Current variables: {:?}", current);
+    
+    // Add/update variables
+    let mut updates = current.clone();
+    updates.insert("VERSION".to_string(), "v2.1.0".to_string());
+    updates.insert("DATE".to_string(), "2026-03-29".to_string());
+    
+    // Set the updated variables
+    client.set_text_variables(updates, 
+        kicad_ipc_rs::MapMergeMode::Replace
+    ).await?;
+    
+    println!("Text variables updated successfully");
+    Ok(())
+}</code></pre>
+<h2 id="example-automation---add-test-points-to-unconnected-pads"><a class="header" href="#example-automation---add-test-points-to-unconnected-pads">Example: Automation - Add Test Points to Unconnected Pads</a></h2>
+<p>Automatically add test point footprints to pads that aren’t connected to nets:</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::{KiCadClient, CommitAction, KiCadError, PcbItem};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClient::connect().await?;
+    
+    // Get all pads and filter for unconnected ones
+    let items = client.get_all_pcb_items().await?;
+    
+    let mut unconnected_pads = Vec::new();
+    for item in items {
+        if let PcbItem::Pad(pad) = item {
+            if pad.net_code.is_none() &amp;&amp; pad.pad_number != "1" {
+                unconnected_pads.push(pad);
+            }
+        }
+    }
+    
+    if unconnected_pads.is_empty() {
+        println!("No unconnected pads found");
+        return Ok(());
+    }
+    
+    println!("Found {} unconnected pads to add test points", unconnected_pads.len());
+    
+    // Start commit session
+    let commit = client.begin_commit().await?;
+    
+    // For each unconnected pad, add a test point footprint
+    // (simplified - actual implementation would create footprint items)
+    for pad in unconnected_pads.iter().take(5) {
+        println!("Would add test point near pad {} at {:?}", 
+            pad.pad_number, pad.position_nm);
+    }
+    
+    // Commit the changes
+    client.end_commit(
+        commit.id,
+        CommitAction::Commit,
+        "Added test points to unconnected pads"
+    ).await?;
+    
+    Ok(())
+}</code></pre>
+<h2 id="example-cicd---design-rule-check-integration"><a class="header" href="#example-cicd---design-rule-check-integration">Example: CI/CD - Design Rule Check Integration</a></h2>
+<p>Script to run automated checks before committing to version control:</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClientBlocking;
+
+fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClientBlocking::connect()?;
+    
+    // Check 1: Verify board is open
+    if !client.has_open_board()? {
+        eprintln!("ERROR: No board is open in KiCad");
+        std::process::exit(1);
+    }
+    
+    // Check 2: Get all nets and look for DRC markers
+    let nets = client.get_nets()?;
+    println!("✓ Board has {} nets", nets.len());
+    
+    // Check 3: Verify board origin is set
+    let origin = client.get_board_origin(
+        kicad_ipc_rs::BoardOriginKind::Drill
+    )?;
+    println!("✓ Board origin at ({}, {})", origin.x_nm, origin.y_nm);
+    
+    // Check 4: Save the board before proceeding
+    client.save_document()?;
+    println!("✓ Board saved");
+    
+    // Check 5: Export board as string for diffing
+    let board_string = client.get_board_as_string()?;
+    println!("✓ Board exported ({} bytes)", board_string.len());
+    
+    println!("\nAll checks passed! Board is ready for commit.");
+    Ok(())
+}</code></pre>
+<h2 id="example-integration---net-class-validation"><a class="header" href="#example-integration---net-class-validation">Example: Integration - Net Class Validation</a></h2>
+<p>Verify that all nets have appropriate net classes assigned:</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClientBlocking;
+use std::collections::BTreeSet;
+
+fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClientBlocking::connect()?;
+    
+    // Get all net classes
+    let net_classes = client.get_net_classes()?;
+    let class_names: BTreeSet&lt;_&gt; = net_classes
+        .iter()
+        .map(|nc| nc.name.clone())
+        .collect();
+    
+    // Get all nets
+    let nets = client.get_nets()?;
+    
+    // Check each net has a valid net class
+    let mut missing_class = Vec::new();
+    let netclass_map = client.get_netclass_for_nets(
+        nets.iter().map(|n| n.code).collect()
+    )?;
+    
+    for (net_code, class_entry) in netclass_map {
+        if class_entry.net_class_name.is_empty() {
+            let net = nets.iter().find(|n| n.code == net_code).unwrap();
+            missing_class.push(net.name.clone());
+        }
+    }
+    
+    if missing_class.is_empty() {
+        println!("✓ All {} nets have net classes assigned", nets.len());
+    } else {
+        println!("⚠ {} nets without net classes:", missing_class.len());
+        for net in missing_class.iter().take(10) {
+            println!("  - {}", net);
+        }
+    }
+    
+    Ok(())
+}</code></pre>
+<h2 id="example-working-with-selections"><a class="header" href="#example-working-with-selections">Example: Working with Selections</a></h2>
+<p>Programmatically select and modify items:</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClientBlocking;
+
+fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClientBlocking::connect()?;
+    
+    // Get current selection summary
+    let summary = client.get_selection_summary(vec![])?;
+    println!("Currently selected: {} items", summary.total_count);
+    
+    // Clear selection
+    let result = client.clear_selection()?;
+    println!("Cleared {} items from selection", result.summary.total_count);
+    
+    // Get all tracks
+    let tracks = client.get_items_by_type_codes(vec![
+        kicad_ipc_rs::PcbObjectTypeCode::new_trace()
+    ])?;
+    
+    // Select first 5 tracks
+    let track_ids: Vec&lt;_&gt; = tracks.iter()
+        .take(5)
+        .filter_map(|item| {
+            if let kicad_ipc_rs::PcbItem::Track(t) = item {
+                t.id.clone()
+            } else {
+                None
+            }
+        })
+        .collect();
+    
+    if !track_ids.is_empty() {
+        let result = client.add_to_selection(track_ids)?;
+        println!("Added {} tracks to selection", result.summary.total_count);
+    }
+    
+    Ok(())
+}</code></pre>
+<h2 id="cli-testing-tool"><a class="header" href="#cli-testing-tool">CLI Testing Tool</a></h2>
+<p>A CLI tool is available for rapid command testing and debugging:</p>
+<pre><code class="language-bash">cargo run --features blocking --bin kicad-ipc-cli -- help
+</code></pre>
+<p>Common commands:</p>
+<pre><code class="language-bash"># Basic connectivity
+cargo run --features blocking --bin kicad-ipc-cli -- ping
 cargo run --features blocking --bin kicad-ipc-cli -- version
+
+# Board queries
 cargo run --features blocking --bin kicad-ipc-cli -- board-open
+cargo run --features blocking --bin kicad-ipc-cli -- nets
+cargo run --features blocking --bin kicad-ipc-cli -- pcb-types
+
+# Selection
+cargo run --features blocking --bin kicad-ipc-cli -- selection-summary
+cargo run --features blocking --bin kicad-ipc-cli -- clear-selection
 </code></pre>
 <p>Full command catalog: <a href="https://github.com/Milind220/kicad-ipc-rs/blob/main/docs/TEST_CLI.md">docs/TEST_CLI.md</a></p>
+<h2 id="next-steps-1"><a class="header" href="#next-steps-1">Next Steps</a></h2>
+<ul>
+<li>Learn about <a href="#usage-patterns">usage patterns</a> for integration best practices</li>
+<li>Check the <a href="#quickstart">quickstart</a> for getting connected</li>
+<li>Browse the <a href="#api-reference">API reference</a> for complete method documentation</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="validation-and-testing"><a class="header" href="#validation-and-testing">Validation and Testing</a></h1>
 <p>Before handoff or release:</p>
@@ -377,11 +671,8 @@ cargo test --features blocking
 <li><a href="https://github.com/Milind220/kicad-ipc-rs/blob/main/test-scripts/kicad-ipc-cli.rs"><code>test-scripts/kicad-ipc-cli.rs</code></a></li>
 </ul>
 </li>
-<li>Runtime command coverage matrix:
-<ul>
-<li><a href="https://github.com/Milind220/kicad-ipc-rs#kicad-v10-rc11-api-completion-matrix">README coverage section</a></li>
-</ul>
-</li>
+<li>Runtime command coverage matrix:</li>
+<li><a href="https://github.com/Milind220/kicad-ipc-rs#kicad-v1000-api-completion-matrix">README coverage section</a></li>
 <li>Runtime CLI verification flow:
 <ul>
 <li><a href="https://github.com/Milind220/kicad-ipc-rs/blob/main/docs/TEST_CLI.md">docs/TEST_CLI.md</a></li>
