@@ -4765,11 +4765,12 @@ mod tests {
             .encode_to_vec(),
         };
 
-        let err = super::decode_any::<crate::proto::kiapi::board::commands::BoardLayerNameResponse>(
-            &payload,
-            super::RES_BOARD_LAYER_NAME_RESPONSE,
-        )
-        .expect_err("mismatched type_url should fail");
+        let err =
+            super::decode_any::<crate::proto::kiapi::board::commands::BoardLayerNameResponse>(
+                &payload,
+                super::RES_BOARD_LAYER_NAME_RESPONSE,
+            )
+            .expect_err("mismatched type_url should fail");
 
         assert!(matches!(err, KiCadError::UnexpectedPayloadType { .. }));
     }

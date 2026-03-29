@@ -1,5 +1,7 @@
 # Contributing
 
+Issues and PRs welcome! This document covers the contribution workflow.
+
 This repository requires Conventional Commits.
 
 ## Commit Message Policy (Required)
@@ -19,5 +21,6 @@ Examples:
   - `cargo test`
   - `cargo test --features blocking`
 
-## Maintainer Notes
-- Proto regeneration workflow lives in `CONTRIBUTIONS.md`.
+## Resources
+- Guide site source: `docs/book/src/` (deployed via GitHub Pages)
+- Proto regeneration workflow: `CONTRIBUTIONS.md`

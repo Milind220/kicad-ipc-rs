@@ -60,10 +60,12 @@ pub mod client;
 ///
 /// This module is public for advanced integrations and debugging, but most users
 /// should prefer [`crate::client::KiCadClient`] methods.
+#[allow(missing_docs)]
 pub mod commands;
 /// Envelope helpers for command/response packing and unpacking.
 ///
 /// This is primarily an advanced/internal surface.
+#[allow(missing_docs)]
 pub mod envelope;
 /// Error types returned by this crate.
 pub mod error;
@@ -73,6 +75,7 @@ pub mod model;
 /// IPC transport implementation details.
 ///
 /// Most applications should not need to use this module directly.
+#[allow(missing_docs)]
 pub mod transport;
 
 #[cfg(feature = "blocking")]
