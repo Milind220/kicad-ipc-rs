@@ -83,7 +83,7 @@ This crate ships checked-in Rust protobuf output under `src/proto/generated/`.
 
 - Consumers do **not** need KiCad source checkout or git submodules.
 - Maintainers regenerate bindings from KiCad upstream via the `kicad` git submodule.
-- Current proto pin: KiCad `10.0.0-rc1.1` (`KICAD_API_VERSION = 10.0.0-rc1.1-0-gc7c84125`).
+- Current proto pin: KiCad `10.0.0` (`KICAD_API_VERSION = 10.0.0-0-g0feeca2a`).
 
 Maintainer refresh flow:
 
@@ -101,7 +101,7 @@ The regeneration tool also stamps `KICAD_API_VERSION` from the KiCad submodule g
 
 ## Runtime Compatibility Notes
 
-- KiCad version (`kicad-ipc-cli version`): `10.0.0 (10.0.0-rc1)`
+- KiCad version (`kicad-ipc-cli version`): `10.0.0 (10.0.0)`
 
 Commands wrapped in this crate but currently unhandled/unsupported by this KiCad build:
 
@@ -114,7 +114,7 @@ Runtime-verified operations include:
 - `UpdateItems`
 - `DeleteItems`
 
-## KiCad v10 RC1.1 API Completion Matrix
+## KiCad v10.0.0 API Completion Matrix
 
 Legend:
 - `Implemented` = wrapped in current Rust client (`src/client.rs`).
@@ -128,9 +128,9 @@ Legend:
 | Common (base) | 6 | 6 | 100% |
 | Common editor/document | 23 | 23 | 100% |
 | Project manager | 5 | 5 | 100% |
-| Board editor (PCB) | 22 | 22 | 100% |
+| Board editor (PCB) | 23 | 23 | 100% |
 | Schematic editor (dedicated proto commands) | 0 | 0 | n/a |
-| **Total** | **56** | **56** | **100%** |
+| **Total** | **57** | **57** | **100%** |
 
 ### Common (base)
 
@@ -204,6 +204,7 @@ Legend:
 | `SetVisibleLayers` | Implemented | `KiCadClient::set_visible_layers` |
 | `GetActiveLayer` | Implemented | `KiCadClient::get_active_layer` |
 | `SetActiveLayer` | Implemented | `KiCadClient::set_active_layer` |
+| `GetBoardLayerName` | Implemented | `KiCadClient::get_board_layer_name` |
 | `GetBoardEditorAppearanceSettings` | Implemented | `KiCadClient::get_board_editor_appearance_settings_raw`, `KiCadClient::get_board_editor_appearance_settings` |
 | `SetBoardEditorAppearanceSettings` | Implemented | `KiCadClient::set_board_editor_appearance_settings` |
 | `InteractiveMoveItems` | Implemented | `KiCadClient::interactive_move_items_raw`, `KiCadClient::interactive_move_items` |

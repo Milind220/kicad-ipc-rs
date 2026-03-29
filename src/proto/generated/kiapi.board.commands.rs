@@ -77,6 +77,20 @@ pub struct SetBoardOrigin {
     pub origin: ::core::option::Option<super::super::common::types::Vector2>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetBoardLayerName {
+    #[prost(message, optional, tag = "1")]
+    pub board: ::core::option::Option<super::super::common::types::DocumentSpecifier>,
+    #[prost(enumeration = "super::types::BoardLayer", tag = "2")]
+    pub layer: i32,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct BoardLayerNameResponse {
+    /// The name of the layer shown in the KiCad GUI, which may be a default value like "F.Cu" or may
+    /// have been customized by the user.
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetNets {
     #[prost(message, optional, tag = "1")]
     pub board: ::core::option::Option<super::super::common::types::DocumentSpecifier>,

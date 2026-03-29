@@ -17,7 +17,7 @@ cargo test --features blocking
   - [`src/model/board.rs`](https://github.com/Milind220/kicad-ipc-rs/blob/main/src/model/board.rs)
   - [`test-scripts/kicad-ipc-cli.rs`](https://github.com/Milind220/kicad-ipc-rs/blob/main/test-scripts/kicad-ipc-cli.rs)
 - Runtime command coverage matrix:
-  - [README coverage section](https://github.com/Milind220/kicad-ipc-rs#kicad-v10-rc11-api-completion-matrix)
+- [README coverage section](https://github.com/Milind220/kicad-ipc-rs#kicad-v1000-api-completion-matrix)
 - Runtime CLI verification flow:
   - [docs/TEST_CLI.md](https://github.com/Milind220/kicad-ipc-rs/blob/main/docs/TEST_CLI.md)
 

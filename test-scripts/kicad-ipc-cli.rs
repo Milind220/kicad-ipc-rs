@@ -2587,6 +2587,11 @@ fn proto_coverage_board_read_rows() -> Vec<(&'static str, &'static str, &'static
             "get_active_layer",
         ),
         (
+            "kiapi.board.commands.GetBoardLayerName",
+            "implemented",
+            "get_board_layer_name",
+        ),
+        (
             "kiapi.board.commands.GetBoardEditorAppearanceSettings",
             "implemented",
             "get_board_editor_appearance_settings_raw/get_board_editor_appearance_settings",

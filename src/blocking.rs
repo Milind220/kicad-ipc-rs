@@ -428,6 +428,7 @@ impl KiCadClientBlocking {
         fn set_active_layer(&self, layer_id: i32) -> Result<(), KiCadError>;
         fn get_visible_layers(&self) -> Result<Vec<BoardLayerInfo>, KiCadError>;
         fn set_visible_layers(&self, layer_ids: Vec<i32>) -> Result<(), KiCadError>;
+        fn get_board_layer_name(&self, layer_id: i32) -> Result<String, KiCadError>;
         fn get_board_origin(&self, kind: BoardOriginKind) -> Result<Vector2Nm, KiCadError>;
         fn set_board_origin(&self, kind: BoardOriginKind, origin: Vector2Nm) -> Result<(), KiCadError>;
         fn get_selection_summary(&self, type_codes: Vec<i32>) -> Result<SelectionSummary, KiCadError>;

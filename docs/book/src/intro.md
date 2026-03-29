@@ -12,8 +12,8 @@ Project goals:
 Current scope:
 
 - KiCad API proto snapshot pinned in repo (`src/proto/generated/`).
-- 56/56 wrapped command families from the current snapshot.
-- Runtime compatibility verified against KiCad `10.0.0-rc1`.
+- 57/57 wrapped command families from the current snapshot.
+- Runtime compatibility verified against KiCad `10.0.0`.
 
 Core entrypoints:
 
