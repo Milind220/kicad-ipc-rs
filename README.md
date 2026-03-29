@@ -16,6 +16,20 @@ Beta. All KiCad v10.0.0 API commands are implemented and tested.
 - Async API (default): production-ready with full feature parity
 - Sync/blocking wrapper API (`feature = "blocking"`): production-ready, uses dedicated Tokio runtime thread
 
+## Prerequisites
+
+- **Rust 1.70+** (edition 2021)
+- **KiCad 10.0.0+** running with the IPC API enabled
+- The `nng` transport library is bundled automatically via [nng-rs](https://crates.io/crates/nng)
+
+### Enabling the KiCad IPC API
+
+1. Open KiCad → **Preferences** → **Plugins**
+2. Check **Enable IPC API**  
+3. Restart KiCad
+
+The API socket path is auto-detected. Override with `KICAD_API_SOCKET` if needed.
+
 ## Usage
 
 ### Async API (Default)
@@ -110,6 +124,23 @@ async fn add_track(client: &KiCadClient) -> Result<(), kicad_ipc_rs::KiCadError>
     Ok(())
 }
 ```
+
+## Examples
+
+Run the included examples against a running KiCad instance:
+
+```bash
+# Minimal connection + version check
+cargo run --example hello_kicad --features blocking
+
+# Inspect board nets, layers, and origin
+cargo run --example board_inspector --features blocking
+
+# Deep-dive into current PCB selection
+cargo run --example selection_deep_dump --features blocking
+```
+
+See the [examples/](examples/) directory for full source.
 
 ## KiCad Version Compatibility
 

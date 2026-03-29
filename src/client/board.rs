@@ -1,3 +1,5 @@
+//! Board-specific operations: nets, layers, origin, stackup, graphics defaults, and DRC.
+
 use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;

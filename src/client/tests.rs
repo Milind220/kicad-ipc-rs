@@ -18,7 +18,10 @@ use super::mappers::*;
 use super::{
     envelope, is_get_open_documents_unhandled, normalize_socket_uri, project_path_from_environment,
     resolve_current_project_path, select_single_board_document, select_single_project_path,
-    CMD_GET_BOARD_LAYER_NAME, KIPRJMOD_ENV, PCB_OBJECT_TYPES, RES_BOARD_LAYER_NAME_RESPONSE,
+    CMD_BEGIN_COMMIT, CMD_CREATE_ITEMS, CMD_DELETE_ITEMS, CMD_END_COMMIT, CMD_GET_BOARD_LAYER_NAME,
+    CMD_GET_NETS, CMD_GET_SELECTION, CMD_GET_VERSION, CMD_PING, KIPRJMOD_ENV, PCB_OBJECT_TYPES,
+    RES_BOARD_LAYER_NAME_RESPONSE, RES_CREATE_ITEMS_RESPONSE, RES_DELETE_ITEMS_RESPONSE,
+    RES_GET_NETS, RES_GET_VERSION, RES_PROTOBUF_EMPTY, RES_SELECTION_RESPONSE,
 };
 
 #[cfg(test)]
@@ -1190,5 +1193,61 @@ mod tests {
 
         let err = map_polygon_with_holes(polygon).expect_err("missing arc point must fail");
         assert!(matches!(err, KiCadError::InvalidResponse { .. }));
+    }
+
+    #[test]
+    fn cmd_constants_use_kiapi_prefix() {
+        let cmd_constants = [
+            super::CMD_PING,
+            super::CMD_GET_VERSION,
+            super::CMD_GET_NETS,
+            super::CMD_GET_SELECTION,
+            super::CMD_CREATE_ITEMS,
+            super::CMD_DELETE_ITEMS,
+            super::CMD_BEGIN_COMMIT,
+            super::CMD_END_COMMIT,
+        ];
+        for cmd in cmd_constants {
+            assert!(
+                cmd.starts_with("kiapi."),
+                "CMD constant '{cmd}' should start with 'kiapi.'"
+            );
+        }
+    }
+
+    #[test]
+    fn res_constants_use_expected_prefix() {
+        let res_constants = [
+            super::RES_GET_VERSION,
+            super::RES_GET_NETS,
+            super::RES_SELECTION_RESPONSE,
+            super::RES_CREATE_ITEMS_RESPONSE,
+            super::RES_DELETE_ITEMS_RESPONSE,
+            super::RES_PROTOBUF_EMPTY,
+        ];
+        for res in res_constants {
+            assert!(
+                res.starts_with("kiapi.") || res.starts_with("google.protobuf."),
+                "RES constant '{res}' should start with 'kiapi.' or 'google.protobuf.'"
+            );
+        }
+    }
+
+    #[test]
+    fn pcb_object_types_catalog_is_nonempty_and_valid() {
+        assert!(
+            !super::PCB_OBJECT_TYPES.is_empty(),
+            "PCB_OBJECT_TYPES should contain at least one entry"
+        );
+        for entry in super::PCB_OBJECT_TYPES.iter() {
+            assert!(
+                !entry.name.is_empty(),
+                "PCB object type name should not be empty"
+            );
+            assert!(
+                entry.code >= 0,
+                "PCB object type code should be non-negative"
+            );
+        }
     }
 }

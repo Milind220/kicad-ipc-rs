@@ -1,3 +1,5 @@
+//! Selection management: get, add, remove, and clear the active PCB selection.
+
 use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;

@@ -1,3 +1,5 @@
+//! Proto-to-model and model-to-proto conversion functions.
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use prost::Message;

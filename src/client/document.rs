@@ -1,3 +1,5 @@
+//! Document operations: save, revert, title block, and string serialization.
+
 use super::decode::decode_pcb_items;
 use super::mappers::*;
 use super::{

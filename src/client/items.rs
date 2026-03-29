@@ -1,3 +1,5 @@
+//! Item CRUD operations: create, update, delete, query, and commit workflows.
+
 use std::collections::BTreeMap;
 
 use crate::envelope;

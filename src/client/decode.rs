@@ -1,3 +1,5 @@
+//! PCB item decoding from raw protobuf `Any` payloads into typed `PcbItem` variants.
+
 use std::collections::BTreeMap;
 
 use super::mappers::*;

@@ -1,3 +1,5 @@
+//! Common API operations: version, paths, documents, text variables, and text geometry.
+
 use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;

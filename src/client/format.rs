@@ -1,3 +1,5 @@
+//! Human-readable formatting for PCB items and debug utilities.
+
 use super::mappers::*;
 use crate::envelope;
 use crate::error::KiCadError;

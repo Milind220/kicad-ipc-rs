@@ -1,3 +1,5 @@
+//! Geometry queries: bounding boxes, hit testing, pad polygons, padstack presence, and zone refill.
+
 use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;
