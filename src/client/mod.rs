@@ -13,20 +13,15 @@ mod tests;
 
 use self::mappers::*;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::envelope;
 use crate::error::KiCadError;
-use crate::model::board::*;
 use crate::model::common::*;
-use crate::proto::kiapi::board as board_proto;
-use crate::proto::kiapi::board::commands as board_commands;
-use crate::proto::kiapi::board::types as board_types;
 use crate::proto::kiapi::common::commands as common_commands;
-use crate::proto::kiapi::common::project as common_project;
 use crate::proto::kiapi::common::types as common_types;
 use crate::transport::Transport;
 
@@ -481,115 +476,6 @@ pub(crate) fn map_document_specifier(
         board_filename,
         project: project_info,
     })
-}
-
-pub(crate) fn model_document_to_proto(
-    document: &DocumentSpecifier,
-) -> common_types::DocumentSpecifier {
-    let identifier = document.board_filename.as_ref().map(|filename| {
-        common_types::document_specifier::Identifier::BoardFilename(filename.clone())
-    });
-
-    let project = common_types::ProjectSpecifier {
-        name: document.project.name.clone().unwrap_or_default(),
-        path: document
-            .project
-            .path
-            .as_ref()
-            .map(|path| path.display().to_string())
-            .unwrap_or_default(),
-    };
-
-    common_types::DocumentSpecifier {
-        r#type: document.document_type.to_proto(),
-        project: Some(project),
-        identifier,
-    }
-}
-
-pub(crate) fn project_document_proto() -> common_types::DocumentSpecifier {
-    common_types::DocumentSpecifier {
-        r#type: DocumentType::Project.to_proto(),
-        project: Some(common_types::ProjectSpecifier::default()),
-        identifier: None,
-    }
-}
-
-fn text_spec_to_proto(text: TextSpec) -> common_types::Text {
-    common_types::Text {
-        position: text.position_nm.map(vector2_nm_to_proto),
-        attributes: text.attributes.map(text_attributes_spec_to_proto),
-        text: text.text,
-        hyperlink: text.hyperlink.unwrap_or_default(),
-    }
-}
-
-fn text_attributes_spec_to_proto(attributes: TextAttributesSpec) -> common_types::TextAttributes {
-    common_types::TextAttributes {
-        font_name: attributes.font_name.unwrap_or_default(),
-        horizontal_alignment: text_horizontal_alignment_to_proto(attributes.horizontal_alignment),
-        vertical_alignment: text_vertical_alignment_to_proto(attributes.vertical_alignment),
-        angle: attributes
-            .angle_degrees
-            .map(|value_degrees| common_types::Angle { value_degrees }),
-        line_spacing: attributes.line_spacing.unwrap_or(1.0),
-        stroke_width: attributes
-            .stroke_width_nm
-            .map(|value_nm| common_types::Distance { value_nm }),
-        italic: attributes.italic,
-        bold: attributes.bold,
-        underlined: attributes.underlined,
-        visible: true,
-        mirrored: attributes.mirrored,
-        multiline: attributes.multiline,
-        keep_upright: attributes.keep_upright,
-        size: attributes.size_nm.map(vector2_nm_to_proto),
-    }
-}
-
-fn text_horizontal_alignment_to_proto(value: TextHorizontalAlignment) -> i32 {
-    match value {
-        TextHorizontalAlignment::Unknown => common_types::HorizontalAlignment::HaUnknown as i32,
-        TextHorizontalAlignment::Left => common_types::HorizontalAlignment::HaLeft as i32,
-        TextHorizontalAlignment::Center => common_types::HorizontalAlignment::HaCenter as i32,
-        TextHorizontalAlignment::Right => common_types::HorizontalAlignment::HaRight as i32,
-        TextHorizontalAlignment::Indeterminate => {
-            common_types::HorizontalAlignment::HaIndeterminate as i32
-        }
-    }
-}
-
-fn text_vertical_alignment_to_proto(value: TextVerticalAlignment) -> i32 {
-    match value {
-        TextVerticalAlignment::Unknown => common_types::VerticalAlignment::VaUnknown as i32,
-        TextVerticalAlignment::Top => common_types::VerticalAlignment::VaTop as i32,
-        TextVerticalAlignment::Center => common_types::VerticalAlignment::VaCenter as i32,
-        TextVerticalAlignment::Bottom => common_types::VerticalAlignment::VaBottom as i32,
-        TextVerticalAlignment::Indeterminate => {
-            common_types::VerticalAlignment::VaIndeterminate as i32
-        }
-    }
-}
-
-fn text_box_spec_to_proto(text: TextBoxSpec) -> common_types::TextBox {
-    common_types::TextBox {
-        top_left: text.top_left_nm.map(vector2_nm_to_proto),
-        bottom_right: text.bottom_right_nm.map(vector2_nm_to_proto),
-        attributes: text.attributes.map(text_attributes_spec_to_proto),
-        text: text.text,
-    }
-}
-
-fn text_object_spec_to_proto(text: TextObjectSpec) -> common_commands::TextOrTextBox {
-    let inner = match text {
-        TextObjectSpec::Text(value) => {
-            common_commands::text_or_text_box::Inner::Text(text_spec_to_proto(value))
-        }
-        TextObjectSpec::TextBox(value) => {
-            common_commands::text_or_text_box::Inner::Textbox(text_box_spec_to_proto(value))
-        }
-    };
-    common_commands::TextOrTextBox { inner: Some(inner) }
 }
 
 pub(crate) fn select_single_board_document(

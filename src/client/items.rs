@@ -1,7 +1,5 @@
 //! Item CRUD operations: create, update, delete, query, and commit workflows.
 
-use std::collections::BTreeMap;
-
 use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;
@@ -15,15 +13,16 @@ use super::decode::*;
 use super::format::*;
 use super::mappers::*;
 use super::{
-    model_document_to_proto, KiCadClient, CMD_BEGIN_COMMIT, CMD_CREATE_ITEMS, CMD_DELETE_ITEMS,
-    CMD_END_COMMIT, CMD_GET_ITEMS, CMD_GET_ITEMS_BY_ID, CMD_GET_ITEMS_BY_NET,
-    CMD_GET_ITEMS_BY_NET_CLASS, CMD_GET_NETCLASS_FOR_NETS, CMD_PARSE_AND_CREATE_ITEMS_FROM_STRING,
-    CMD_UPDATE_ITEMS, PCB_OBJECT_TYPES, RES_BEGIN_COMMIT_RESPONSE, RES_CREATE_ITEMS_RESPONSE,
-    RES_DELETE_ITEMS_RESPONSE, RES_END_COMMIT_RESPONSE, RES_GET_ITEMS_RESPONSE,
-    RES_NETCLASS_FOR_NETS_RESPONSE, RES_PROTOBUF_EMPTY, RES_UPDATE_ITEMS_RESPONSE,
+    KiCadClient, CMD_BEGIN_COMMIT, CMD_CREATE_ITEMS, CMD_DELETE_ITEMS, CMD_END_COMMIT,
+    CMD_GET_ITEMS_BY_NET, CMD_GET_ITEMS_BY_NET_CLASS, CMD_GET_NETCLASS_FOR_NETS,
+    CMD_PARSE_AND_CREATE_ITEMS_FROM_STRING, CMD_UPDATE_ITEMS, PCB_OBJECT_TYPES,
+    RES_BEGIN_COMMIT_RESPONSE, RES_CREATE_ITEMS_RESPONSE, RES_DELETE_ITEMS_RESPONSE,
+    RES_END_COMMIT_RESPONSE, RES_GET_ITEMS_RESPONSE, RES_NETCLASS_FOR_NETS_RESPONSE,
+    RES_UPDATE_ITEMS_RESPONSE,
 };
 
 impl KiCadClient {
+    /// Starts a commit session and returns the raw begin-commit payload.
     pub async fn begin_commit_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::BeginCommit {};
         let response = self
@@ -40,6 +39,7 @@ impl KiCadClient {
         map_commit_session(response)
     }
 
+    /// Ends a commit session and returns the raw end-commit payload.
     pub async fn end_commit_raw(
         &self,
         session: CommitSession,
@@ -74,6 +74,7 @@ impl KiCadClient {
         Ok(())
     }
 
+    /// Creates items and returns the raw create-items payload.
     pub async fn create_items_raw(
         &self,
         items: Vec<prost_types::Any>,
@@ -116,6 +117,7 @@ impl KiCadClient {
             .collect()
     }
 
+    /// Updates items and returns the raw update-items payload.
     pub async fn update_items_raw(
         &self,
         items: Vec<prost_types::Any>,
@@ -155,6 +157,7 @@ impl KiCadClient {
             .collect()
     }
 
+    /// Deletes items and returns the raw delete-items payload.
     pub async fn delete_items_raw(
         &self,
         item_ids: Vec<String>,
@@ -196,6 +199,7 @@ impl KiCadClient {
             .collect()
     }
 
+    /// Parses KiCad item text and creates items, returning raw create-items payload.
     pub async fn parse_and_create_items_from_string_raw(
         &self,
         contents: impl Into<String>,
@@ -214,6 +218,7 @@ impl KiCadClient {
         response_payload_as_any(response, RES_CREATE_ITEMS_RESPONSE)
     }
 
+    /// Parses KiCad item text and returns created items as raw payloads.
     pub async fn parse_and_create_items_from_string(
         &self,
         contents: impl Into<String>,
@@ -237,17 +242,20 @@ impl KiCadClient {
             .collect()
     }
 
+    /// Returns `(pad_id, net)` mappings derived from footprint items.
     pub async fn get_pad_netlist(&self) -> Result<Vec<PadNetEntry>, KiCadError> {
         let footprint_items = self
             .get_items_raw(vec![common_types::KiCadObjectType::KotPcbFootprint as i32])
             .await?;
         pad_netlist_from_footprint_items(footprint_items)
     }
+    /// Returns vias as raw protobuf payloads.
     pub async fn get_vias_raw(&self) -> Result<Vec<prost_types::Any>, KiCadError> {
         self.get_items_raw(vec![common_types::KiCadObjectType::KotPcbVia as i32])
             .await
     }
 
+    /// Returns vias decoded into typed [`PcbVia`] entries.
     pub async fn get_vias(&self) -> Result<Vec<PcbVia>, KiCadError> {
         let items = self
             .get_items_by_type_codes(vec![common_types::KiCadObjectType::KotPcbVia as i32])
@@ -279,6 +287,7 @@ impl KiCadClient {
         any_to_pretty_debug(item)
     }
 
+    /// Fetches items by object type codes and returns raw protobuf payloads.
     pub async fn get_items_raw_by_type_codes(
         &self,
         type_codes: Vec<i32>,
@@ -286,6 +295,7 @@ impl KiCadClient {
         self.get_items_raw(type_codes).await
     }
 
+    /// Fetches item details by object type codes.
     pub async fn get_items_details_by_type_codes(
         &self,
         type_codes: Vec<i32>,
@@ -303,6 +313,7 @@ impl KiCadClient {
         decode_pcb_items(items)
     }
 
+    /// Fetches all known object type buckets and returns raw payloads.
     pub async fn get_all_pcb_items_raw(
         &self,
     ) -> Result<Vec<(PcbObjectTypeCode, Vec<prost_types::Any>)>, KiCadError> {
@@ -315,6 +326,7 @@ impl KiCadClient {
         Ok(rows)
     }
 
+    /// Fetches all known object type buckets and returns decoded detail rows.
     pub async fn get_all_pcb_items_details(
         &self,
     ) -> Result<Vec<(PcbObjectTypeCode, Vec<SelectionItemDetail>)>, KiCadError> {
@@ -340,6 +352,7 @@ impl KiCadClient {
         Ok(rows)
     }
 
+    /// Fetches items filtered by net codes and returns raw protobuf payloads.
     pub async fn get_items_by_net_raw(
         &self,
         type_codes: Vec<i32>,
@@ -363,6 +376,7 @@ impl KiCadClient {
         Ok(payload.items)
     }
 
+    /// Fetches items filtered by net codes and decodes typed items.
     pub async fn get_items_by_net(
         &self,
         type_codes: Vec<i32>,
@@ -372,6 +386,7 @@ impl KiCadClient {
         decode_pcb_items(items)
     }
 
+    /// Fetches items filtered by net class names and returns raw payloads.
     pub async fn get_items_by_net_class_raw(
         &self,
         type_codes: Vec<i32>,
@@ -392,6 +407,7 @@ impl KiCadClient {
         Ok(payload.items)
     }
 
+    /// Fetches items filtered by net class names and decodes typed items.
     pub async fn get_items_by_net_class(
         &self,
         type_codes: Vec<i32>,
@@ -403,6 +419,7 @@ impl KiCadClient {
         decode_pcb_items(items)
     }
 
+    /// Resolves net class assignments for nets and returns raw response payload.
     pub async fn get_netclass_for_nets_raw(
         &self,
         nets: Vec<BoardNet>,
@@ -424,6 +441,7 @@ impl KiCadClient {
         response_payload_as_any(response, RES_NETCLASS_FOR_NETS_RESPONSE)
     }
 
+    /// Resolves net class assignments for nets.
     pub async fn get_netclass_for_nets(
         &self,
         nets: Vec<BoardNet>,

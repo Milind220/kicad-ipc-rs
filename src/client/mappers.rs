@@ -1,8 +1,6 @@
 //! Proto-to-model and model-to-proto conversion functions.
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use prost::Message;
+use std::collections::BTreeMap;
 
 use crate::envelope;
 use crate::error::KiCadError;
@@ -1182,85 +1180,5 @@ pub(crate) fn map_graphic_shape_geometry(
                 end_nm: bezier.end.map(map_vector2_nm),
             })
         }
-    }
-}
-
-pub(crate) fn map_graphic_shape_kind(shape: Option<&common_types::GraphicShape>) -> Option<String> {
-    let geometry = shape?.geometry.as_ref()?;
-    Some(match geometry {
-        common_types::graphic_shape::Geometry::Segment(_) => "SEGMENT".to_string(),
-        common_types::graphic_shape::Geometry::Rectangle(_) => "RECTANGLE".to_string(),
-        common_types::graphic_shape::Geometry::Arc(_) => "ARC".to_string(),
-        common_types::graphic_shape::Geometry::Circle(_) => "CIRCLE".to_string(),
-        common_types::graphic_shape::Geometry::Polygon(_) => "POLYGON".to_string(),
-        common_types::graphic_shape::Geometry::Bezier(_) => "BEZIER".to_string(),
-    })
-}
-
-pub(crate) fn map_dimension_style(
-    style: Option<board_types::dimension::DimensionStyle>,
-) -> Option<PcbDimensionStyle> {
-    let style = style?;
-    match style {
-        board_types::dimension::DimensionStyle::Aligned(aligned) => {
-            Some(PcbDimensionStyle::Aligned {
-                start_nm: aligned.start.map(map_vector2_nm),
-                end_nm: aligned.end.map(map_vector2_nm),
-                height_nm: map_optional_distance_nm(aligned.height),
-                extension_height_nm: map_optional_distance_nm(aligned.extension_height),
-            })
-        }
-        board_types::dimension::DimensionStyle::Orthogonal(orthogonal) => {
-            let alignment = common_types::AxisAlignment::try_from(orthogonal.alignment)
-                .map(|value| value.as_str_name().to_string())
-                .unwrap_or_else(|_| format!("UNKNOWN({})", orthogonal.alignment));
-
-            Some(PcbDimensionStyle::Orthogonal {
-                start_nm: orthogonal.start.map(map_vector2_nm),
-                end_nm: orthogonal.end.map(map_vector2_nm),
-                height_nm: map_optional_distance_nm(orthogonal.height),
-                extension_height_nm: map_optional_distance_nm(orthogonal.extension_height),
-                alignment: Some(alignment),
-            })
-        }
-        board_types::dimension::DimensionStyle::Radial(radial) => Some(PcbDimensionStyle::Radial {
-            center_nm: radial.center.map(map_vector2_nm),
-            radius_point_nm: radial.radius_point.map(map_vector2_nm),
-            leader_length_nm: map_optional_distance_nm(radial.leader_length),
-        }),
-        board_types::dimension::DimensionStyle::Leader(leader) => {
-            let border_style = board_types::DimensionTextBorderStyle::try_from(leader.border_style)
-                .map(|value| value.as_str_name().to_string())
-                .unwrap_or_else(|_| format!("UNKNOWN({})", leader.border_style));
-            Some(PcbDimensionStyle::Leader {
-                start_nm: leader.start.map(map_vector2_nm),
-                end_nm: leader.end.map(map_vector2_nm),
-                border_style: Some(border_style),
-            })
-        }
-        board_types::dimension::DimensionStyle::Center(center) => Some(PcbDimensionStyle::Center {
-            center_nm: center.center.map(map_vector2_nm),
-            end_nm: center.end.map(map_vector2_nm),
-        }),
-    }
-}
-
-pub(crate) fn map_pad_type(value: i32) -> PcbPadType {
-    match board_types::PadType::try_from(value) {
-        Ok(board_types::PadType::PtPth) => PcbPadType::Pth,
-        Ok(board_types::PadType::PtSmd) => PcbPadType::Smd,
-        Ok(board_types::PadType::PtEdgeConnector) => PcbPadType::EdgeConnector,
-        Ok(board_types::PadType::PtNpth) => PcbPadType::Npth,
-        _ => PcbPadType::Unknown(value),
-    }
-}
-
-pub(crate) fn map_zone_type(value: i32) -> PcbZoneType {
-    match board_types::ZoneType::try_from(value) {
-        Ok(board_types::ZoneType::ZtCopper) => PcbZoneType::Copper,
-        Ok(board_types::ZoneType::ZtGraphical) => PcbZoneType::Graphical,
-        Ok(board_types::ZoneType::ZtRuleArea) => PcbZoneType::RuleArea,
-        Ok(board_types::ZoneType::ZtTeardrop) => PcbZoneType::Teardrop,
-        _ => PcbZoneType::Unknown(value),
     }
 }

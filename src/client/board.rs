@@ -3,7 +3,6 @@
 use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;
-use crate::model::common::*;
 use crate::proto::kiapi::board::commands as board_commands;
 use crate::proto::kiapi::common::types as common_types;
 
@@ -21,6 +20,7 @@ use super::{
 };
 
 impl KiCadClient {
+    /// Lists nets in the active PCB document.
     pub async fn get_nets(&self) -> Result<Vec<BoardNet>, KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::GetNets {
@@ -44,6 +44,7 @@ impl KiCadClient {
             .collect())
     }
 
+    /// Returns enabled board layers and current copper layer count.
     pub async fn get_board_enabled_layers(&self) -> Result<BoardEnabledLayers, KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::GetBoardEnabledLayers { board: Some(board) };
@@ -58,6 +59,7 @@ impl KiCadClient {
         Ok(map_board_enabled_layers_response(payload))
     }
 
+    /// Sets enabled layers and copper layer count, then returns resulting state.
     pub async fn set_board_enabled_layers(
         &self,
         copper_layer_count: u32,
@@ -79,6 +81,7 @@ impl KiCadClient {
         Ok(map_board_enabled_layers_response(payload))
     }
 
+    /// Returns the currently active drawing layer.
     pub async fn get_active_layer(&self) -> Result<BoardLayerInfo, KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::GetActiveLayer { board: Some(board) };
@@ -93,6 +96,7 @@ impl KiCadClient {
         Ok(layer_to_model(payload.layer))
     }
 
+    /// Sets the active drawing layer by KiCad layer id.
     pub async fn set_active_layer(&self, layer_id: i32) -> Result<(), KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::SetActiveLayer {
@@ -105,6 +109,7 @@ impl KiCadClient {
         Ok(())
     }
 
+    /// Returns all currently visible layers.
     pub async fn get_visible_layers(&self) -> Result<Vec<BoardLayerInfo>, KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::GetVisibleLayers { board: Some(board) };
@@ -119,6 +124,7 @@ impl KiCadClient {
         Ok(payload.layers.into_iter().map(layer_to_model).collect())
     }
 
+    /// Sets visible layers by KiCad layer ids.
     pub async fn set_visible_layers(&self, layer_ids: Vec<i32>) -> Result<(), KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::SetVisibleLayers {
@@ -131,6 +137,7 @@ impl KiCadClient {
         Ok(())
     }
 
+    /// Resolves a layer id to its display name.
     pub async fn get_board_layer_name(&self, layer_id: i32) -> Result<String, KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::GetBoardLayerName {
@@ -147,6 +154,7 @@ impl KiCadClient {
         Ok(payload.name)
     }
 
+    /// Returns the board origin for the requested origin kind.
     pub async fn get_board_origin(&self, kind: BoardOriginKind) -> Result<Vector2Nm, KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::GetBoardOrigin {
@@ -165,6 +173,7 @@ impl KiCadClient {
         })
     }
 
+    /// Sets the board origin for the requested origin kind.
     pub async fn set_board_origin(
         &self,
         kind: BoardOriginKind,
@@ -182,8 +191,7 @@ impl KiCadClient {
         Ok(())
     }
 
-    /// Returns a compact summary of the current PCB selection.
-
+    /// Injects a DRC marker in the active board and returns raw response payload.
     pub async fn inject_drc_error_raw(
         &self,
         severity: DrcSeverity,
@@ -209,6 +217,7 @@ impl KiCadClient {
         response_payload_as_any(response, RES_INJECT_DRC_ERROR_RESPONSE)
     }
 
+    /// Injects a DRC marker and returns the created marker id when available.
     pub async fn inject_drc_error(
         &self,
         severity: DrcSeverity,
@@ -224,6 +233,7 @@ impl KiCadClient {
         Ok(response.marker.map(|marker| marker.value))
     }
 
+    /// Returns board stackup response as raw protobuf payload.
     pub async fn get_board_stackup_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = board_commands::GetBoardStackup {
             board: Some(self.current_board_document_proto().await?),
@@ -244,6 +254,7 @@ impl KiCadClient {
         Ok(map_board_stackup(response.stackup.unwrap_or_default()))
     }
 
+    /// Sends a stackup update and returns the raw protobuf response payload.
     pub async fn update_board_stackup_raw(
         &self,
         stackup: BoardStackup,
@@ -271,6 +282,7 @@ impl KiCadClient {
         Ok(map_board_stackup(response.stackup.unwrap_or_default()))
     }
 
+    /// Returns graphics defaults as raw protobuf payload.
     pub async fn get_graphics_defaults_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = board_commands::GetGraphicsDefaults {
             board: Some(self.current_board_document_proto().await?),
@@ -283,6 +295,7 @@ impl KiCadClient {
         response_payload_as_any(response, RES_GRAPHICS_DEFAULTS_RESPONSE)
     }
 
+    /// Returns mapped board graphics defaults.
     pub async fn get_graphics_defaults(&self) -> Result<GraphicsDefaults, KiCadError> {
         let payload = self.get_graphics_defaults_raw().await?;
         let response: board_commands::GraphicsDefaultsResponse =
@@ -290,6 +303,7 @@ impl KiCadClient {
         Ok(map_graphics_defaults(response.defaults.unwrap_or_default()))
     }
 
+    /// Returns editor appearance settings as raw protobuf payload.
     pub async fn get_board_editor_appearance_settings_raw(
         &self,
     ) -> Result<prost_types::Any, KiCadError> {
@@ -305,6 +319,7 @@ impl KiCadClient {
         response_payload_as_any(response, RES_BOARD_EDITOR_APPEARANCE_SETTINGS)
     }
 
+    /// Returns mapped board editor appearance settings.
     pub async fn get_board_editor_appearance_settings(
         &self,
     ) -> Result<BoardEditorAppearanceSettings, KiCadError> {
@@ -314,6 +329,7 @@ impl KiCadClient {
         Ok(map_board_editor_appearance_settings(response))
     }
 
+    /// Sets board editor appearance settings and returns resulting persisted settings.
     pub async fn set_board_editor_appearance_settings(
         &self,
         settings: BoardEditorAppearanceSettings,
@@ -332,6 +348,7 @@ impl KiCadClient {
         self.get_board_editor_appearance_settings().await
     }
 
+    /// Starts an interactive move for the provided items and returns raw response payload.
     pub async fn interactive_move_items_raw(
         &self,
         item_ids: Vec<String>,
@@ -356,6 +373,7 @@ impl KiCadClient {
         response_payload_as_any(response, RES_PROTOBUF_EMPTY)
     }
 
+    /// Starts an interactive move for the provided items.
     pub async fn interactive_move_items(&self, item_ids: Vec<String>) -> Result<(), KiCadError> {
         let _ = self.interactive_move_items_raw(item_ids).await?;
         Ok(())

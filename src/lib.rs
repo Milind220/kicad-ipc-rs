@@ -55,6 +55,7 @@
 #![warn(missing_docs)]
 
 /// High-level async client and request/response convenience methods.
+#[allow(clippy::module_inception)]
 pub mod client;
 /// Low-level command payload builders.
 ///
@@ -68,9 +69,11 @@ pub mod commands;
 #[allow(missing_docs)]
 pub mod envelope;
 /// Error types returned by this crate.
+#[allow(missing_docs)]
 pub mod error;
 mod kicad_api_version;
 /// Stable data models used by typed client APIs.
+#[allow(missing_docs)]
 pub mod model;
 /// IPC transport implementation details.
 ///

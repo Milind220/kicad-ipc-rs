@@ -1,3 +1,5 @@
+//! Blocking facade over the async [`KiCadClient`] API.
+
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, SyncSender};
@@ -117,43 +119,53 @@ impl Drop for BlockingCore {
 }
 
 #[derive(Clone, Debug)]
+/// Thread-safe blocking KiCad IPC client.
+///
+/// This wrapper runs async operations on a dedicated Tokio runtime thread.
 pub struct KiCadClientBlocking {
     inner: KiCadClient,
     core: Arc<BlockingCore>,
 }
 
 #[derive(Clone, Debug)]
+/// Builder for [`KiCadClientBlocking`].
 pub struct KiCadClientBlockingBuilder {
     inner: ClientBuilder,
 }
 
 impl KiCadClientBlockingBuilder {
+    /// Creates a blocking client builder with default configuration.
     pub fn new() -> Self {
         Self {
             inner: ClientBuilder::new(),
         }
     }
 
+    /// Sets IPC timeout used by the underlying async client.
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.inner = self.inner.timeout(timeout);
         self
     }
 
+    /// Sets KiCad IPC socket path/URI.
     pub fn socket_path(mut self, socket_path: impl Into<String>) -> Self {
         self.inner = self.inner.socket_path(socket_path);
         self
     }
 
+    /// Sets authentication token sent to KiCad IPC.
     pub fn token(mut self, token: impl Into<String>) -> Self {
         self.inner = self.inner.token(token);
         self
     }
 
+    /// Sets client name sent during IPC handshake.
     pub fn client_name(mut self, client_name: impl Into<String>) -> Self {
         self.inner = self.inner.client_name(client_name);
         self
     }
 
+    /// Connects and returns a ready-to-use blocking client.
     pub fn connect(self) -> Result<KiCadClientBlocking, KiCadError> {
         let core = BlockingCore::start()?;
         let inner_builder = self.inner;
@@ -174,6 +186,7 @@ macro_rules! blocking_methods {
         $(fn $name:ident(&self $(, $arg:ident : $arg_ty:ty)*) -> $ret:ty;)+
     ) => {
         $(
+            #[doc = concat!("Blocking wrapper for [`KiCadClient::", stringify!($name), "`].")]
             pub fn $name(&self, $($arg: $arg_ty),*) -> $ret {
                 let client = self.inner.clone();
                 self.core.call(move |runtime| runtime.block_on(async move {
@@ -190,26 +203,32 @@ macro_rules! blocking_methods {
 }
 
 impl KiCadClientBlocking {
+    /// Returns a builder for configuring a blocking KiCad client.
     pub fn builder() -> KiCadClientBlockingBuilder {
         KiCadClientBlockingBuilder::new()
     }
 
+    /// Connects using default blocking client configuration.
     pub fn connect() -> Result<Self, KiCadError> {
         KiCadClientBlockingBuilder::new().connect()
     }
 
+    /// Returns configured request timeout.
     pub fn timeout(&self) -> Duration {
         self.inner.timeout()
     }
 
+    /// Returns configured KiCad IPC socket URI.
     pub fn socket_uri(&self) -> &str {
         self.inner.socket_uri()
     }
 
+    /// Returns the underlying async client reference.
     pub fn inner(&self) -> &KiCadClient {
         &self.inner
     }
 
+    /// Runs a KiCad action and returns the raw action response payload.
     pub fn run_action_raw(&self, action: impl Into<String>) -> Result<Any, KiCadError> {
         let action = action.into();
         let client = self.inner.clone();
@@ -218,6 +237,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Runs a KiCad action and returns mapped status.
     pub fn run_action(&self, action: impl Into<String>) -> Result<RunActionStatus, KiCadError> {
         let action = action.into();
         let client = self.inner.clone();
@@ -225,6 +245,7 @@ impl KiCadClientBlocking {
             .call(move |runtime| runtime.block_on(async move { client.run_action(action).await }))
     }
 
+    /// Resolves a KiCad binary path and returns raw response payload.
     pub fn get_kicad_binary_path_raw(
         &self,
         binary_name: impl Into<String>,
@@ -236,6 +257,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Resolves a KiCad binary path.
     pub fn get_kicad_binary_path(
         &self,
         binary_name: impl Into<String>,
@@ -247,6 +269,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Resolves plugin settings path and returns raw response payload.
     pub fn get_plugin_settings_path_raw(
         &self,
         identifier: impl Into<String>,
@@ -258,6 +281,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Resolves plugin settings path.
     pub fn get_plugin_settings_path(
         &self,
         identifier: impl Into<String>,
@@ -269,6 +293,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Ends a commit session and returns raw response payload.
     pub fn end_commit_raw(
         &self,
         session: CommitSession,
@@ -282,6 +307,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Ends a commit session.
     pub fn end_commit(
         &self,
         session: CommitSession,
@@ -295,6 +321,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Parses KiCad item text and creates items, returning raw response payload.
     pub fn parse_and_create_items_from_string_raw(
         &self,
         contents: impl Into<String>,
@@ -310,6 +337,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Parses KiCad item text and returns created items as raw payloads.
     pub fn parse_and_create_items_from_string(
         &self,
         contents: impl Into<String>,
@@ -322,6 +350,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Injects a DRC marker and returns raw response payload.
     pub fn inject_drc_error_raw(
         &self,
         severity: DrcSeverity,
@@ -340,6 +369,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Injects a DRC marker and returns marker id when available.
     pub fn inject_drc_error(
         &self,
         severity: DrcSeverity,
@@ -358,6 +388,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Saves a copy of the active document and returns raw response payload.
     pub fn save_copy_of_document_raw(
         &self,
         path: impl Into<String>,
@@ -375,6 +406,7 @@ impl KiCadClientBlocking {
         })
     }
 
+    /// Saves a copy of the active document.
     pub fn save_copy_of_document(
         &self,
         path: impl Into<String>,

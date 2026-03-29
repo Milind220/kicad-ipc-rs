@@ -22,17 +22,8 @@ Goal: close data-loss gaps between KiCad protobuf payloads and public `kicad-ipc
   - [`kicad/api/proto/common/commands/editor_commands.proto:373`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/kicad/api/proto/common/commands/editor_commands.proto:373) (`ClearSelection`)
   - [`kicad/api/proto/common/commands/editor_commands.proto:424`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/kicad/api/proto/common/commands/editor_commands.proto:424) (`SavedSelectionResponse`)
 - Client flow:
-  - [`src/client.rs:1067`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:1067) (`get_selection_raw`)
-  - [`src/client.rs:1083`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:1083) (`get_selection_details`)
-  - [`src/client.rs:1089`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:1089) (`get_selection`)
-  - [`src/client.rs:1046`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:1046) (`get_selection_summary`)
-  - [`src/client.rs:1123`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:1123) (`add_to_selection`)
-  - [`src/client.rs:1153`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:1153) (`clear_selection`)
-  - [`src/client.rs:1187`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:1187) (`remove_from_selection`)
-  - [`src/client.rs:1849`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:1849) (`get_selection_as_string`)
-  - [`src/client.rs:2384`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:2384) (`summarize_selection`)
-  - [`src/client.rs:2401`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:2401) (`summarize_item_details`)
-  - [`src/client.rs:3108`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/client.rs:3108) (`decode_pcb_item`)
+  - `src/client/selection.rs` (`get_selection_raw`, `get_selection_details`, `get_selection`, `get_selection_summary`, `add_to_selection`, `clear_selection`, `remove_from_selection`, `get_selection_as_string`, `summarize_selection`, `summarize_item_details`)
+  - `src/client/decode.rs` (`decode_pcb_item`)
 - Public model bottleneck:
   - [`src/model/board.rs:389`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/model/board.rs:389) onward (`Pcb*` structs + `PcbItem`)
   - [`src/model/common.rs:194`](/Users/milindsharma/Developer/kicad-oss/kicad-ipc-rs/src/model/common.rs:194) (`SelectionSummary`)
@@ -91,7 +82,7 @@ Goal: close data-loss gaps between KiCad protobuf payloads and public `kicad-ipc
 1. Add richer selection-return models in `src/model/common.rs`:
    - `SelectionStringDump { ids: Vec<String>, contents: String }`
    - `SelectionMutationResult { items: Vec<Any>, summary: SelectionSummary }` or equivalent typed struct without reducing to summary-only.
-2. Add new `KiCadClient` methods in `src/client.rs`:
+2. Add new `KiCadClient` methods in `src/client/selection.rs`:
    - `get_selection_with_types(type_codes: Vec<i32>) -> Vec<PcbItem>` and raw/details variants.
    - `get_selection_string_dump() -> SelectionStringDump` (keep existing `get_selection_as_string` as convenience).
    - Rich mutation variants for add/remove/clear that expose returned items, not summary only.
@@ -101,7 +92,7 @@ Goal: close data-loss gaps between KiCad protobuf payloads and public `kicad-ipc
 ### Phase 2: reduce typed-model loss
 
 1. Expand `Pcb*` structs in `src/model/board.rs` with additive optional fields (no removals).
-2. Update `decode_pcb_item` mapping in `src/client.rs` to fill new fields.
+2. Update `decode_pcb_item` mapping in `src/client/decode.rs` to fill new fields.
 3. Prefer structured enums over stringified debug fields where possible:
    - graphic geometry
    - dimension style
@@ -116,7 +107,7 @@ Goal: close data-loss gaps between KiCad protobuf payloads and public `kicad-ipc
 
 ### Phase 4: docs/tests/regression
 
-1. Unit tests in `src/client.rs`:
+1. Unit tests in `src/client/tests.rs`:
    - new selection filter path
    - new response models keep previously dropped fields
    - backward compatibility on old methods

@@ -3,8 +3,8 @@
 use super::decode::decode_pcb_items;
 use super::mappers::*;
 use super::{
-    model_document_to_proto, KiCadClient, CMD_GET_ITEMS_BY_ID, CMD_GET_TITLE_BLOCK_INFO,
-    CMD_REVERT_DOCUMENT, CMD_SAVE_COPY_OF_DOCUMENT, CMD_SAVE_DOCUMENT, CMD_SAVE_DOCUMENT_TO_STRING,
+    KiCadClient, CMD_GET_ITEMS_BY_ID, CMD_GET_TITLE_BLOCK_INFO, CMD_REVERT_DOCUMENT,
+    CMD_SAVE_COPY_OF_DOCUMENT, CMD_SAVE_DOCUMENT, CMD_SAVE_DOCUMENT_TO_STRING,
     CMD_SAVE_SELECTION_TO_STRING, RES_GET_ITEMS_RESPONSE, RES_PROTOBUF_EMPTY,
     RES_SAVED_DOCUMENT_RESPONSE, RES_SAVED_SELECTION_RESPONSE, RES_TITLE_BLOCK_INFO,
 };
@@ -52,6 +52,7 @@ impl KiCadClient {
         })
     }
 
+    /// Saves the active PCB document and returns the raw operation payload.
     pub async fn save_document_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::SaveDocument {
             document: Some(self.current_board_document_proto().await?),
@@ -63,11 +64,13 @@ impl KiCadClient {
         response_payload_as_any(response, RES_PROTOBUF_EMPTY)
     }
 
+    /// Saves the active PCB document.
     pub async fn save_document(&self) -> Result<(), KiCadError> {
         let _ = self.save_document_raw().await?;
         Ok(())
     }
 
+    /// Saves a copy of the active PCB document and returns raw operation payload.
     pub async fn save_copy_of_document_raw(
         &self,
         path: impl Into<String>,
@@ -89,6 +92,7 @@ impl KiCadClient {
         response_payload_as_any(response, RES_PROTOBUF_EMPTY)
     }
 
+    /// Saves a copy of the active PCB document.
     pub async fn save_copy_of_document(
         &self,
         path: impl Into<String>,
@@ -101,6 +105,7 @@ impl KiCadClient {
         Ok(())
     }
 
+    /// Reverts unsaved changes in the active PCB document and returns raw payload.
     pub async fn revert_document_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::RevertDocument {
             document: Some(self.current_board_document_proto().await?),
@@ -112,6 +117,7 @@ impl KiCadClient {
         response_payload_as_any(response, RES_PROTOBUF_EMPTY)
     }
 
+    /// Reverts unsaved changes in the active PCB document.
     pub async fn revert_document(&self) -> Result<(), KiCadError> {
         let _ = self.revert_document_raw().await?;
         Ok(())
@@ -146,6 +152,7 @@ impl KiCadClient {
         })
     }
 
+    /// Fetches items by id and returns raw protobuf payloads.
     pub async fn get_items_by_id_raw(
         &self,
         item_ids: Vec<String>,
@@ -173,6 +180,7 @@ impl KiCadClient {
         Ok(payload.items)
     }
 
+    /// Fetches items by id and returns lightweight decoded detail rows.
     pub async fn get_items_by_id_details(
         &self,
         item_ids: Vec<String>,

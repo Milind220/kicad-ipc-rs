@@ -17,6 +17,7 @@ use super::{
 };
 
 impl KiCadClient {
+    /// Rebuilds fill geometry for the given zone ids.
     pub async fn refill_zones(&self, zone_ids: Vec<String>) -> Result<(), KiCadError> {
         let board = self.current_board_document_proto().await?;
         let command = board_commands::RefillZones {
@@ -33,6 +34,7 @@ impl KiCadClient {
         let _ = response_payload_as_any(response, RES_PROTOBUF_EMPTY)?;
         Ok(())
     }
+    /// Returns pad polygon responses as raw protobuf payloads.
     pub async fn get_pad_shape_as_polygon_raw(
         &self,
         pad_ids: Vec<String>,
@@ -67,6 +69,7 @@ impl KiCadClient {
         Ok(payloads)
     }
 
+    /// Returns mapped pad polygons for the requested layer.
     pub async fn get_pad_shape_as_polygon(
         &self,
         pad_ids: Vec<String>,
@@ -107,6 +110,7 @@ impl KiCadClient {
         Ok(entries)
     }
 
+    /// Returns padstack presence responses as raw protobuf payloads.
     pub async fn check_padstack_presence_on_layers_raw(
         &self,
         item_ids: Vec<String>,
@@ -143,6 +147,7 @@ impl KiCadClient {
         Ok(payloads)
     }
 
+    /// Returns mapped padstack presence for item and layer combinations.
     pub async fn check_padstack_presence_on_layers(
         &self,
         item_ids: Vec<String>,
@@ -179,6 +184,7 @@ impl KiCadClient {
         Ok(entries)
     }
 
+    /// Returns axis-aligned bounding boxes for item ids.
     pub async fn get_item_bounding_boxes(
         &self,
         item_ids: Vec<String>,
@@ -213,6 +219,7 @@ impl KiCadClient {
         map_item_bounding_boxes(payload.items, payload.boxes)
     }
 
+    /// Runs hit-test for a specific item at a position with tolerance.
     pub async fn hit_test_item(
         &self,
         item_id: String,

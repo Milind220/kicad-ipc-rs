@@ -1,15 +1,11 @@
 //! PCB item decoding from raw protobuf `Any` payloads into typed `PcbItem` variants.
 
-use std::collections::BTreeMap;
-
 use super::mappers::*;
 use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;
-use crate::model::common::*;
 use crate::proto::kiapi::board::types as board_types;
 use crate::proto::kiapi::common::types as common_types;
-use prost::Message;
 pub(crate) fn map_graphic_shape_kind(shape: Option<&common_types::GraphicShape>) -> Option<String> {
     let geometry = shape?.geometry.as_ref()?;
     Some(match geometry {

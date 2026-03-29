@@ -1,16 +1,4 @@
-use std::sync::Mutex;
-
-use prost::Message;
-
 use crate::error::KiCadError;
-use crate::model::board::*;
-use crate::model::common::*;
-use crate::proto::kiapi::board as board_proto;
-use crate::proto::kiapi::board::commands as board_commands;
-use crate::proto::kiapi::board::types as board_types;
-use crate::proto::kiapi::common::commands as common_commands;
-use crate::proto::kiapi::common::project as common_project;
-use crate::proto::kiapi::common::types as common_types;
 
 use super::decode::*;
 use super::format::*;
@@ -37,9 +25,8 @@ mod tests {
         project_path_from_environment, resolve_current_project_path, response_payload_as_any,
         select_single_board_document, select_single_project_path, selection_item_detail,
         summarize_item_details, summarize_selection, text_horizontal_alignment_to_proto,
-        text_spec_to_proto, KIPRJMOD_ENV, PCB_OBJECT_TYPES,
+        text_spec_to_proto, KiCadError, KIPRJMOD_ENV, PCB_OBJECT_TYPES,
     };
-    use crate::error::KiCadError;
     use crate::model::board::{
         BoardLayerInfo, BoardStackup, BoardStackupLayer, BoardStackupLayerType, PcbItem, PcbViaType,
     };

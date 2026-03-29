@@ -4,10 +4,7 @@ use super::mappers::*;
 use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;
-use crate::model::common::*;
 use crate::proto::kiapi::board::types as board_types;
-use crate::proto::kiapi::common::types as common_types;
-use prost::Message;
 pub(crate) fn selection_item_detail(item: &prost_types::Any) -> Result<String, KiCadError> {
     if item.type_url == envelope::type_url("kiapi.board.types.Track") {
         let track = decode_any::<board_types::Track>(item, "kiapi.board.types.Track")?;

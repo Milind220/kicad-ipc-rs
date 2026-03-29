@@ -12,18 +12,18 @@ use std::path::PathBuf;
 
 use super::mappers::*;
 use super::{
-    is_get_open_documents_unhandled, map_document_specifier, model_document_to_proto,
-    project_document_proto, resolve_current_project_path, rpc, select_single_board_document,
-    select_single_project_path, KiCadClient, CMD_EXPAND_TEXT_VARIABLES, CMD_GET_KICAD_BINARY_PATH,
-    CMD_GET_NET_CLASSES, CMD_GET_OPEN_DOCUMENTS, CMD_GET_PLUGIN_SETTINGS_PATH,
-    CMD_GET_TEXT_AS_SHAPES, CMD_GET_TEXT_EXTENTS, CMD_GET_TEXT_VARIABLES, CMD_GET_VERSION,
-    CMD_PING, CMD_REFRESH_EDITOR, CMD_RUN_ACTION, CMD_SET_NET_CLASSES, CMD_SET_TEXT_VARIABLES,
-    RES_BOX2, RES_EXPAND_TEXT_VARIABLES_RESPONSE, RES_GET_OPEN_DOCUMENTS,
-    RES_GET_TEXT_AS_SHAPES_RESPONSE, RES_GET_VERSION, RES_NET_CLASSES_RESPONSE, RES_PATH_RESPONSE,
-    RES_PROTOBUF_EMPTY, RES_RUN_ACTION_RESPONSE, RES_STRING_RESPONSE, RES_TEXT_VARIABLES,
+    map_document_specifier, project_document_proto, resolve_current_project_path, rpc, KiCadClient,
+    CMD_EXPAND_TEXT_VARIABLES, CMD_GET_KICAD_BINARY_PATH, CMD_GET_NET_CLASSES,
+    CMD_GET_OPEN_DOCUMENTS, CMD_GET_PLUGIN_SETTINGS_PATH, CMD_GET_TEXT_AS_SHAPES,
+    CMD_GET_TEXT_EXTENTS, CMD_GET_TEXT_VARIABLES, CMD_GET_VERSION, CMD_PING, CMD_REFRESH_EDITOR,
+    CMD_RUN_ACTION, CMD_SET_NET_CLASSES, CMD_SET_TEXT_VARIABLES, RES_BOX2,
+    RES_EXPAND_TEXT_VARIABLES_RESPONSE, RES_GET_OPEN_DOCUMENTS, RES_GET_TEXT_AS_SHAPES_RESPONSE,
+    RES_GET_VERSION, RES_NET_CLASSES_RESPONSE, RES_PATH_RESPONSE, RES_PROTOBUF_EMPTY,
+    RES_RUN_ACTION_RESPONSE, RES_STRING_RESPONSE, RES_TEXT_VARIABLES,
 };
 
 impl KiCadClient {
+    /// Verifies IPC connectivity with a lightweight ping.
     pub async fn ping(&self) -> Result<(), KiCadError> {
         let command = envelope::pack_any(&common_commands::Ping {}, CMD_PING);
         self.send_command(command).await?;
@@ -42,6 +42,7 @@ impl KiCadClient {
         Ok(())
     }
 
+    /// Runs a KiCad action and returns the raw action response payload.
     pub async fn run_action_raw(
         &self,
         action: impl Into<String>,
@@ -82,6 +83,7 @@ impl KiCadClient {
         })
     }
 
+    /// Resolves a KiCad binary path and returns the raw path response payload.
     pub async fn get_kicad_binary_path_raw(
         &self,
         binary_name: impl Into<String>,
@@ -101,6 +103,7 @@ impl KiCadClient {
         Ok(response.path)
     }
 
+    /// Resolves plugin settings path and returns the raw string response payload.
     pub async fn get_plugin_settings_path_raw(
         &self,
         identifier: impl Into<String>,
@@ -147,6 +150,7 @@ impl KiCadClient {
             .collect())
     }
 
+    /// Returns project net classes as raw protobuf payload.
     pub async fn get_net_classes_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::GetNetClasses {};
         rpc!(self, CMD_GET_NET_CLASSES, command, RES_NET_CLASSES_RESPONSE)
@@ -166,6 +170,7 @@ impl KiCadClient {
         Ok(classes)
     }
 
+    /// Sets project net classes and returns the raw operation response payload.
     pub async fn set_net_classes_raw(
         &self,
         net_classes: Vec<NetClassInfo>,
@@ -194,6 +199,7 @@ impl KiCadClient {
         self.get_net_classes().await
     }
 
+    /// Returns project text variables as raw protobuf payload.
     pub async fn get_text_variables_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::GetTextVariables {
             document: Some(project_document_proto()),
@@ -211,6 +217,7 @@ impl KiCadClient {
         Ok(response.variables.into_iter().collect())
     }
 
+    /// Sets project text variables and returns the raw operation response payload.
     pub async fn set_text_variables_raw(
         &self,
         variables: BTreeMap<String, String>,
@@ -239,6 +246,7 @@ impl KiCadClient {
         self.get_text_variables().await
     }
 
+    /// Expands project text variables and returns the raw expansion response payload.
     pub async fn expand_text_variables_raw(
         &self,
         text: Vec<String>,
@@ -264,6 +272,7 @@ impl KiCadClient {
         Ok(response.text)
     }
 
+    /// Computes text extents and returns the raw bounding box payload.
     pub async fn get_text_extents_raw(
         &self,
         text: TextSpec,
@@ -294,6 +303,7 @@ impl KiCadClient {
         })
     }
 
+    /// Converts text objects to shapes and returns the raw response payload.
     pub async fn get_text_as_shapes_raw(
         &self,
         text: Vec<TextObjectSpec>,

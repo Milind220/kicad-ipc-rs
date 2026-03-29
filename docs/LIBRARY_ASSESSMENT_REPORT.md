@@ -116,13 +116,13 @@ Interpretation: This is a broad API surface for a single crate module; drift con
 
 ### Test inventory (unit tests in `src/`)
 
-- `src/client.rs`: 50
+- `src/client/tests.rs`: 65
 - `src/blocking.rs`: 7
 - `src/model/common.rs`: 6
 - `src/model/board.rs`: 4
 - `src/envelope.rs`: 2
 
-Total identified unit tests: 69
+Total identified unit tests: 84
 
 Interpretation: Coverage appears substantial for a library of this size, with strongest emphasis on client behavior and mapping.
 
@@ -137,14 +137,14 @@ Interpretation: Coverage appears substantial for a library of this size, with st
 
 - **Zero `.unwrap()` calls in production code** (confirmed via exhaustive grep).
 - **All 56 `.expect()` calls are in test code only** (zero in production paths).
-- **Zero production `panic!` usage** (all 7 instances in `src/client.rs` are in `#[cfg(test)]` modules).
+- **Zero production `panic!` usage** (panic usage is confined to test modules under `src/client/tests.rs`).
 - **No TODO/FIXME/HACK/XXX markers** in non-generated source.
 
 ### Notable anti-pattern/style findings
 
 #### AP-1: `clone_on_copy` in production mapping path
 
-- Evidence: `src/client.rs:2329` (`Option<StrokeAttributes>` clone called where type is `Copy`)
+- Evidence: previously observed in client mapping code before modularization.
 - Impact: Low runtime impact, but signals unnecessary ownership noise and can obscure intent.
 - Severity: Low
 - **Status: RESOLVED** (commit 5d3bb4b)
@@ -161,12 +161,12 @@ Interpretation: Coverage appears substantial for a library of this size, with st
 
 #### AP-3: Test-style bool asserts flagged
 
-- Evidence: test assertions around `src/client.rs:4648`, `:4657`, `:4663`, `:4692`, `:4698`
+- Evidence: client unit tests under `src/client/tests.rs`.
 - Impact: Low; style-level issue only.
 - Severity: Low
 - **Status: RESOLVED** (commit 5d3bb4b)
 
-#### AP-4: Heavy repeated RPC boilerplate in `client.rs`
+#### AP-4: Heavy repeated RPC boilerplate in client module
 
 - Repeated pattern appears across many methods:
   1. Build command
@@ -174,9 +174,7 @@ Interpretation: Coverage appears substantial for a library of this size, with st
   3. `response_payload_as_any(response, RES_*)`
   4. `decode_any(...)`
 - Evidence:
-  - `send_command + pack_any`: `src/client.rs:367`, `:411`, `:434`, `:459`, `:475`, `:508`, `:1665`
-  - `response_payload_as_any`: `src/client.rs:369`, `:413`, `:436`, `:477`, `:510`, `:530`, `:1842`
-  - `decode_any`: `src/client.rs:379`, `:422`, `:445`, `:484`, `:536`, `:589`, `:1698`
+  - Seen across `src/client/common.rs`, `src/client/board.rs`, `src/client/items.rs`, `src/client/document.rs`.
 - Impact: Boilerplate proliferation increases maintenance drag and inconsistency risk.
 - Severity: Medium
 - **Status: MITIGATED** — `rpc!` dispatch macro added and demonstrated in 4 methods (commit bda2ed6). Full conversion available for future work.
@@ -184,7 +182,7 @@ Interpretation: Coverage appears substantial for a library of this size, with st
 #### AP-5: Silenced results via `let _ =` in production code
 
 - Evidence:
-  - `src/client.rs`: `:519`, `:564`, `:1422`, `:1716`, `:1745`, `:1797`, `:1828`, `:1846`
+  - Client module methods in `src/client/common.rs`, `src/client/board.rs`, and `src/client/document.rs`
   - `src/transport.rs:36` (channel send during shutdown)
   - `src/blocking.rs`: `:41`, `:46`, `:77`, `:103`
 - Notes: Some cases are intentional (e.g., benign send failure during shutdown), but several cases could hide useful operational failures.
@@ -193,8 +191,7 @@ Interpretation: Coverage appears substantial for a library of this size, with st
 
 #### AP-6: Pervasive unchecked `as i32` casts for protobuf enum discriminants
 
-- Evidence: 77 production instances across `src/client.rs` and `src/model/common.rs`.
-  - Examples: `src/model/common.rs:42-48`, `:107-112`; `src/client.rs:127-195`, `:1213`, `:1219`, `:2145-2162`, `:2691-2705`
+- Evidence: numerous production instances across `src/client/mod.rs`, `src/client/mappers.rs`, and `src/model/common.rs`.
 - Notes: This is common in prost-backed code, but it is still unchecked narrowing.
 - Impact: Low in current protocol-constrained context; type-safety remains weaker than explicit conversion helpers.
 - Severity: Low
@@ -245,7 +242,7 @@ No major architectural anti-patterns like pervasive `unwrap` in production paths
 
 #### ST-1: Monolithic client module
 
-- Evidence: `src/client.rs` at 5448 LOC with 107 public async methods.
+- Evidence: formerly monolithic `src/client.rs` at 5448 LOC with 107 public async methods.
 - Why it matters:
   - Larger review blast radius for changes.
   - Mixed responsibilities (command dispatch + mapping + helpers + tests) in one file.
@@ -254,7 +251,6 @@ No major architectural anti-patterns like pervasive `unwrap` in production paths
 
 ##### Natural splitting points for `client.rs`
 
-- `client/core.rs`: connect/send_command/context resolution (~lines 284-348)
 - `client/common.rs`: ping/version/paths/open docs/run_action/text/netclass (~lines 359-666)
 - `client/items.rs`: item CRUD, item decoding, by-id/by-type queries (~lines 671-861, 1211-1409)
 - `client/board.rs`: board layers/origin/stackup/appearance/nets (~lines 885-1040, 1572-1744)
@@ -296,7 +292,7 @@ Diff vs `origin/main` (10 files changed):
 - Generated proto refresh:
   - `src/proto/generated/kiapi.board.commands.rs`
 - New method wiring:
-  - `src/client.rs` (`GetBoardLayerName` request/response constants + method)
+  - `src/client/board.rs` (`GetBoardLayerName` request/response constants + method)
   - `src/blocking.rs` parity method
 - Coverage/document updates:
   - `README.md`
@@ -356,13 +352,17 @@ PR #23 quality is good. Changes are focused, functionally coherent, and backed b
 - Severity: Low (docs hygiene)
 - **Status: RESOLVED** — investigation confirmed the artifact does not exist on this branch.
 
-#### DR-4: Rustdoc coverage gap in `client.rs`
+#### DR-4: Rustdoc coverage gap in client Tier 1 surface
 
-- 120 public items in `src/client.rs`
+- 120 public items across `src/client/*.rs`
 - 47 documented (39% coverage)
 - 73 public items undocumented
 - Gaps notably include several `*_raw` variants and some typed wrappers
-- Evidence examples of undocumented public methods: `src/client.rs:359`, `:403`, `:426`, `:472`, `:861`, `:908`
+- Evidence examples of undocumented public methods:
+  - `src/client/common.rs`
+  - `src/client/board.rs`
+  - `src/client/items.rs`
+  - `src/client/selection.rs`
 - Severity: Medium (API discoverability)
 
 #### DR-5: Narrow examples set
@@ -446,7 +446,7 @@ Two beginner examples and a README prerequisites section added in commit 6efc241
 | R2 | Monolithic `client.rs` slows safe evolution | Structure | Medium | High | RESOLVED — Split into 11 domain modules (commit 028aff9) |
 | R3 | Strict clippy friction due to generated code | Process | Medium | High | Reproducible with current strict command |
 | R4 | Public placeholder command modules confuse users | API clarity | Low/Med | Medium | Can be fixed with docs or visibility adjustment |
-| R5 | Missing docs on public items in `client.rs` | DX/discoverability | Medium | Medium | 73/120 public items undocumented (39% documented) |
+| R5 | Missing docs on public Tier 1 items in `src/client/*` | DX/discoverability | Medium | Medium | 73/120 public items undocumented (39% documented) |
 | R6 | Broken doc links/anchors | Docs | Low | Medium | RESOLVED — Anchor fixed (commit 5d3bb4b) |
 | R7 | Filesystem artifact in docs tree | Hygiene | Low | Low | RESOLVED — Artifact confirmed nonexistent |
 | R8 | Narrow examples coverage | Onboarding | Medium | High | RESOLVED — Two beginner examples added (commit 6efc241) |
@@ -466,8 +466,7 @@ Expected outcome: Cleaner user navigation, better first-run success, improved CI
 
 ### P1: Maintainability upgrades
 
-1. ✅ Done — Split `src/client.rs` by functional domains while preserving public API signatures, using the proposed module seams:
-   - `client/core.rs`
+1. ✅ Done — Split the former monolithic client file by functional domains while preserving public API signatures, using module seams under `src/client/`:
    - `client/common.rs`
    - `client/items.rs`
    - `client/board.rs`
@@ -475,6 +474,9 @@ Expected outcome: Cleaner user navigation, better first-run success, improved CI
    - `client/geometry.rs`
    - `client/document.rs`
    - `client/mappers.rs`
+   - `client/decode.rs`
+   - `client/format.rs`
+   - `client/tests.rs`
 2. ⬜ Open — Group command/response type URL constants near their domain methods.
 3. ✅ Done — Keep and extend protocol-contract test helpers to reduce repeated literal contract strings.
 4. ✅ Done — Extract a generic typed RPC dispatch helper to reduce repeated `send_command`/`pack_any`/`response_payload_as_any`/`decode_any` boilerplate.
@@ -553,7 +555,7 @@ Given the current API breadth, a tiered documentation policy is the best balance
 
 ### For architecture improvements
 
-- `client.rs` split into coherent domain modules.
+- Client module split into coherent domain submodules under `src/client/`.
 - Repeated RPC boilerplate consolidated into typed helper(s) where practical.
 - No public API breakage in function names/signatures.
 - Existing parity and protocol tests remain green.
@@ -561,7 +563,7 @@ Given the current API breadth, a tiered documentation policy is the best balance
 ## Detailed Notes and Evidence Pointers
 
 - Core API and layering: `src/lib.rs`
-- Main API implementation and constants: `src/client.rs`
+- Main API implementation and constants: `src/client/mod.rs`
 - Blocking parity guard test: `src/blocking.rs:586`
 - Transport bridge implementation: `src/transport.rs`
 - Error boundary taxonomy: `src/error.rs`
@@ -571,18 +573,16 @@ Given the current API breadth, a tiered documentation policy is the best balance
 - Documentation issues:
   - `docs/book/src/validation.md:21`
   - `README.md:118`
-  - `docs/book/src/https:/docs.rs/`
+  - `docs/book/src/validation.md:14`
 - Rustdoc coverage evidence samples (undocumented public methods):
-  - `src/client.rs:359`
-  - `src/client.rs:403`
-  - `src/client.rs:426`
-  - `src/client.rs:472`
-  - `src/client.rs:861`
-  - `src/client.rs:908`
+  - `src/client/common.rs`
+  - `src/client/board.rs`
+  - `src/client/items.rs`
+  - `src/client/selection.rs`
 
 ## Final Assessment
 
-The library is in a strong position functionally and continues to show disciplined protocol-aware testing. The most impactful near-term improvements are documentation integrity (anchors/prerequisites/examples), rustdoc depth for Tier 1 APIs, and lint policy clarity around generated code. Medium-term effort should focus on modularizing `src/client.rs` and reducing repeated RPC boilerplate to sustain quality as API breadth grows.
+The library is in a strong position functionally and continues to show disciplined protocol-aware testing. The most impactful near-term improvements are rustdoc depth for Tier 1 APIs and lint/process cleanup after the client modularization. Medium-term effort should focus on continuing RPC boilerplate consolidation and keeping module boundaries clean as API breadth grows.
 
 ## Report Revision History
 
