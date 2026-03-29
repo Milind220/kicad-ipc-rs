@@ -4739,6 +4739,57 @@ mod tests {
     }
 
     #[test]
+    fn get_board_layer_name_response_decodes_expected_type_url() {
+        let payload = prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.commands.BoardLayerNameResponse"),
+            value: crate::proto::kiapi::board::commands::BoardLayerNameResponse {
+                name: "In1.Cu".to_string(),
+            }
+            .encode_to_vec(),
+        };
+
+        let decoded: crate::proto::kiapi::board::commands::BoardLayerNameResponse =
+            super::decode_any(&payload, super::RES_BOARD_LAYER_NAME_RESPONSE)
+                .expect("layer-name response should decode");
+
+        assert_eq!(decoded.name, "In1.Cu");
+    }
+
+    #[test]
+    fn get_board_layer_name_response_rejects_wrong_type_url() {
+        let payload = prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.commands.BoardLayerResponse"),
+            value: crate::proto::kiapi::board::commands::BoardLayerNameResponse {
+                name: "F.Cu".to_string(),
+            }
+            .encode_to_vec(),
+        };
+
+        let err = super::decode_any::<crate::proto::kiapi::board::commands::BoardLayerNameResponse>(
+            &payload,
+            super::RES_BOARD_LAYER_NAME_RESPONSE,
+        )
+        .expect_err("mismatched type_url should fail");
+
+        assert!(matches!(err, KiCadError::UnexpectedPayloadType { .. }));
+    }
+
+    #[test]
+    fn get_board_layer_name_command_type_url_matches_proto_name() {
+        let command = crate::proto::kiapi::board::commands::GetBoardLayerName {
+            board: None,
+            layer: crate::proto::kiapi::board::types::BoardLayer::BlFCu as i32,
+        };
+
+        let any = super::envelope::pack_any(&command, super::CMD_GET_BOARD_LAYER_NAME);
+
+        assert_eq!(
+            any.type_url,
+            super::envelope::type_url("kiapi.board.commands.GetBoardLayerName")
+        );
+    }
+
+    #[test]
     fn summarize_selection_counts_payload_types() {
         let items = vec![
             prost_types::Any {
