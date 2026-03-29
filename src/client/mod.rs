@@ -30,10 +30,24 @@ use crate::proto::kiapi::common::project as common_project;
 use crate::proto::kiapi::common::types as common_types;
 use crate::transport::Transport;
 
+/// Sends a protobuf command and validates the response type URL.
+///
+/// This macro reduces boilerplate in the `_raw` RPC methods. It packs
+/// the given command, sends it, and returns a validated `prost_types::Any`.
+macro_rules! rpc {
+    ($self:expr, $cmd_type_url:expr, $command:expr, $res_type_url:expr) => {{
+        let response = $self
+            .send_command(crate::envelope::pack_any(&$command, $cmd_type_url))
+            .await?;
+        super::mappers::response_payload_as_any(response, $res_type_url)
+    }};
+}
+
+pub(crate) use rpc;
+
 pub(crate) const KICAD_API_SOCKET_ENV: &str = "KICAD_API_SOCKET";
 pub(crate) const KICAD_API_TOKEN_ENV: &str = "KICAD_API_TOKEN";
 pub(crate) const KIPRJMOD_ENV: &str = "KIPRJMOD";
-
 pub(crate) const CMD_PING: &str = "kiapi.common.commands.Ping";
 pub(crate) const CMD_GET_VERSION: &str = "kiapi.common.commands.GetVersion";
 pub(crate) const CMD_GET_KICAD_BINARY_PATH: &str = "kiapi.common.commands.GetKiCadBinaryPath";

@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use super::mappers::*;
 use super::{
     is_get_open_documents_unhandled, map_document_specifier, model_document_to_proto,
-    project_document_proto, resolve_current_project_path, select_single_board_document,
+    project_document_proto, resolve_current_project_path, rpc, select_single_board_document,
     select_single_project_path, KiCadClient, CMD_EXPAND_TEXT_VARIABLES, CMD_GET_KICAD_BINARY_PATH,
     CMD_GET_NET_CLASSES, CMD_GET_OPEN_DOCUMENTS, CMD_GET_PLUGIN_SETTINGS_PATH,
     CMD_GET_TEXT_AS_SHAPES, CMD_GET_TEXT_EXTENTS, CMD_GET_TEXT_VARIABLES, CMD_GET_VERSION,
@@ -47,12 +47,8 @@ impl KiCadClient {
         let command = common_commands::RunAction {
             action: action.into(),
         };
-        let response = self
-            .send_command(envelope::pack_any(&command, CMD_RUN_ACTION))
-            .await?;
-        response_payload_as_any(response, RES_RUN_ACTION_RESPONSE)
+        rpc!(self, CMD_RUN_ACTION, command, RES_RUN_ACTION_RESPONSE)
     }
-
     /// Runs a KiCad action by action name and returns mapped status.
     pub async fn run_action(
         &self,
@@ -91,12 +87,8 @@ impl KiCadClient {
         let command = common_commands::GetKiCadBinaryPath {
             binary_name: binary_name.into(),
         };
-        let response = self
-            .send_command(envelope::pack_any(&command, CMD_GET_KICAD_BINARY_PATH))
-            .await?;
-        response_payload_as_any(response, RES_PATH_RESPONSE)
+        rpc!(self, CMD_GET_KICAD_BINARY_PATH, command, RES_PATH_RESPONSE)
     }
-
     /// Resolves a KiCad binary path by binary name.
     pub async fn get_kicad_binary_path(
         &self,
@@ -155,12 +147,8 @@ impl KiCadClient {
 
     pub async fn get_net_classes_raw(&self) -> Result<prost_types::Any, KiCadError> {
         let command = common_commands::GetNetClasses {};
-        let response = self
-            .send_command(envelope::pack_any(&command, CMD_GET_NET_CLASSES))
-            .await?;
-        response_payload_as_any(response, RES_NET_CLASSES_RESPONSE)
+        rpc!(self, CMD_GET_NET_CLASSES, command, RES_NET_CLASSES_RESPONSE)
     }
-
     /// Reads project net classes from the current project context.
     pub async fn get_net_classes(&self) -> Result<Vec<NetClassInfo>, KiCadError> {
         let payload = self.get_net_classes_raw().await?;
@@ -281,12 +269,8 @@ impl KiCadClient {
         let command = common_commands::GetTextExtents {
             text: Some(text_spec_to_proto(text)),
         };
-        let response = self
-            .send_command(envelope::pack_any(&command, CMD_GET_TEXT_EXTENTS))
-            .await?;
-        response_payload_as_any(response, RES_BOX2)
+        rpc!(self, CMD_GET_TEXT_EXTENTS, command, RES_BOX2)
     }
-
     /// Computes rendered text extents in nanometer units.
     pub async fn get_text_extents(&self, text: TextSpec) -> Result<TextExtents, KiCadError> {
         let payload = self.get_text_extents_raw(text).await?;
