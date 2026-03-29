@@ -1,3 +1,6 @@
+// Generated protobuf code can trigger clippy::enum_variant_names due to schema-defined naming.
+// Allow this lint at the module level so it applies to all generated includes below.
+#[allow(clippy::enum_variant_names)]
 pub(crate) mod kiapi {
     #[allow(dead_code)]
     pub mod common {

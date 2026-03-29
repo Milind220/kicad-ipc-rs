@@ -2325,9 +2325,7 @@ fn map_text_shape(shape: common_types::GraphicShape) -> Result<TextShape, KiCadE
 
     Ok(TextShape {
         geometry,
-        stroke_width_nm: stroke
-            .clone()
-            .and_then(|value| map_optional_distance_nm(value.width)),
+        stroke_width_nm: stroke.and_then(|value| map_optional_distance_nm(value.width)),
         stroke_style: stroke.as_ref().map(|value| value.style),
         stroke_color: stroke.and_then(|value| map_optional_color(value.color)),
         fill_type: fill.as_ref().map(|value| value.fill_type),
@@ -4645,26 +4643,25 @@ mod tests {
         });
 
         assert!(proto.finish.is_none());
-        assert_eq!(
-            proto
+        assert!(
+            !proto
                 .impedance
                 .expect("impedance should always be present")
-                .is_controlled,
-            false
+                .is_controlled
         );
         let edge = proto.edge.expect("edge should always be present");
         assert!(edge.connector.is_none());
-        assert_eq!(
-            edge.castellation
+        assert!(
+            !edge
+                .castellation
                 .expect("castellation should be present")
-                .has_castellated_pads,
-            false
+                .has_castellated_pads
         );
-        assert_eq!(
-            edge.plating
+        assert!(
+            !edge
+                .plating
                 .expect("plating should be present")
-                .has_edge_plating,
-            false
+                .has_edge_plating
         );
         let layer = proto.layers.first().expect("one layer should be present");
         assert!(layer.thickness.is_none());
@@ -4689,17 +4686,15 @@ mod tests {
         );
         let edge = proto.edge.expect("edge should be present");
         assert!(edge.connector.is_some());
-        assert_eq!(
+        assert!(
             edge.castellation
                 .expect("castellation should be present")
-                .has_castellated_pads,
-            true
+                .has_castellated_pads
         );
-        assert_eq!(
+        assert!(
             edge.plating
                 .expect("plating should be present")
-                .has_edge_plating,
-            true
+                .has_edge_plating
         );
     }
 
@@ -5067,7 +5062,7 @@ mod tests {
                 assert_eq!(text.id.as_deref(), Some("text-id"));
                 assert_eq!(text.text.as_deref(), Some("HELLO"));
                 assert_eq!(text.hyperlink.as_deref(), Some("https://example.com"));
-                assert_eq!(text.knockout, true);
+                assert!(text.knockout);
                 let attributes = text.attributes.expect("text attributes should map");
                 assert_eq!(attributes.font_name.as_deref(), Some("KiCad Font"));
                 assert_eq!(
