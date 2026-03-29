@@ -586,7 +586,18 @@ mod tests {
     #[test]
     fn sync_wrapper_covers_async_method_names() {
         let mut async_methods = BTreeSet::new();
-        for line in include_str!("client.rs").lines() {
+        let source = [
+            include_str!("client/mod.rs"),
+            include_str!("client/common.rs"),
+            include_str!("client/board.rs"),
+            include_str!("client/selection.rs"),
+            include_str!("client/items.rs"),
+            include_str!("client/document.rs"),
+            include_str!("client/geometry.rs"),
+        ]
+        .join("\n");
+
+        for line in source.lines() {
             let trimmed = line.trim_start();
             if let Some(rest) = trimmed.strip_prefix("pub async fn ") {
                 if let Some(name) = rest.split('(').next() {
@@ -594,7 +605,6 @@ mod tests {
                 }
             }
         }
-
         let blocking_methods: BTreeSet<String> =
             KiCadClientBlocking::GENERATED_BLOCKING_METHOD_NAMES
                 .iter()
