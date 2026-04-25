@@ -130,7 +130,7 @@ impl KiCadClient {
         let created_items = self.create_items(items, container_id).await?;
         created_items
             .into_iter()
-            .map(EditablePcbItem::from_any)
+            .map(EditablePcbItem::try_from)
             .collect()
     }
 
@@ -185,7 +185,7 @@ impl KiCadClient {
         let updated_items = self.update_items(items).await?;
         updated_items
             .into_iter()
-            .map(EditablePcbItem::from_any)
+            .map(EditablePcbItem::try_from)
             .collect()
     }
 
@@ -350,7 +350,7 @@ impl KiCadClient {
         type_codes: Vec<i32>,
     ) -> Result<Vec<EditablePcbItem>, KiCadError> {
         let items = self.get_items_raw(type_codes).await?;
-        items.into_iter().map(EditablePcbItem::from_any).collect()
+        items.into_iter().map(EditablePcbItem::try_from).collect()
     }
 
     /// Fetches all known object type buckets and returns raw payloads.

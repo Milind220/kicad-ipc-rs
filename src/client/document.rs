@@ -198,7 +198,7 @@ impl KiCadClient {
         item_ids: Vec<String>,
     ) -> Result<Vec<EditablePcbItem>, KiCadError> {
         let items = self.get_items_by_id_raw(item_ids).await?;
-        items.into_iter().map(EditablePcbItem::from_any).collect()
+        items.into_iter().map(EditablePcbItem::try_from).collect()
     }
     /// Fetches and decodes items by KiCad item id.
     pub async fn get_items_by_id(&self, item_ids: Vec<String>) -> Result<Vec<PcbItem>, KiCadError> {

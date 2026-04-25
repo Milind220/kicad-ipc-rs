@@ -52,10 +52,14 @@
 //! - command builders
 //! - high-level client
 //!
+//! PCB item modeling layers:
+//! - **raw IPC**: [`prost_types::Any`] envelopes carrying KiCad protobuf payloads
+//! - **read model**: [`PcbItem`] typed enums for inspection-oriented reads
+//! - **editable model**: [`EditablePcbItem`] typed wrappers for mutate/update flows
+//!
 //! For editable mutate/update item flows, see the README section
 //! "Making Changes to PCBs" for a short end-to-end example.
 #![warn(missing_docs)]
-
 /// High-level async client and request/response convenience methods.
 #[allow(clippy::module_inception)]
 pub mod client;
@@ -87,7 +91,7 @@ pub mod transport;
 /// Blocking wrapper over the async client.
 pub mod blocking;
 
-pub(crate) mod pcb_item_types;
+pub(crate) mod pcb_item_type_urls;
 pub(crate) mod proto;
 #[cfg(feature = "blocking")]
 pub use crate::blocking::{KiCadClientBlocking, KiCadClientBlockingBuilder};
