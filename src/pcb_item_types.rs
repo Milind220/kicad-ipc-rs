@@ -1,0 +1,13 @@
+pub(crate) const TRACK: &str = "kiapi.board.types.Track";
+pub(crate) const ARC: &str = "kiapi.board.types.Arc";
+pub(crate) const VIA: &str = "kiapi.board.types.Via";
+pub(crate) const FOOTPRINT_INSTANCE: &str = "kiapi.board.types.FootprintInstance";
+pub(crate) const PAD: &str = "kiapi.board.types.Pad";
+pub(crate) const BOARD_GRAPHIC_SHAPE: &str = "kiapi.board.types.BoardGraphicShape";
+pub(crate) const BOARD_TEXT: &str = "kiapi.board.types.BoardText";
+pub(crate) const BOARD_TEXT_BOX: &str = "kiapi.board.types.BoardTextBox";
+pub(crate) const FIELD: &str = "kiapi.board.types.Field";
+pub(crate) const ZONE: &str = "kiapi.board.types.Zone";
+pub(crate) const DIMENSION: &str = "kiapi.board.types.Dimension";
+pub(crate) const GROUP: &str = "kiapi.board.types.Group";
+pub(crate) const REFERENCE_IMAGE: &str = "kiapi.board.types.ReferenceImage";

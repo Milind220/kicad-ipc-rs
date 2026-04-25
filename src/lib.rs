@@ -51,7 +51,9 @@
 //! - envelope
 //! - command builders
 //! - high-level client
-
+//!
+//! For editable mutate/update item flows, see the README section
+//! "Making Changes to PCBs" for a short end-to-end example.
 #![warn(missing_docs)]
 
 /// High-level async client and request/response convenience methods.
@@ -85,8 +87,8 @@ pub mod transport;
 /// Blocking wrapper over the async client.
 pub mod blocking;
 
+pub(crate) mod pcb_item_types;
 pub(crate) mod proto;
-
 #[cfg(feature = "blocking")]
 pub use crate::blocking::{KiCadClientBlocking, KiCadClientBlockingBuilder};
 pub use crate::client::{ClientBuilder, KiCadClient};
@@ -113,3 +115,4 @@ pub use crate::model::common::{
     TextObjectSpec, TextShape, TextShapeGeometry, TextSpec, TextVerticalAlignment, TitleBlockInfo,
     VersionInfo,
 };
+pub use crate::model::editable::*;

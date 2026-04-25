@@ -124,6 +124,15 @@ async fn add_track(client: &KiCadClient) -> Result<(), kicad_ipc_rs::KiCadError>
 }
 ```
 
+For in-place editing flows, fetch editable items, mutate them, then write them back:
+
+```rust
+let mut items = client.get_editable_items_by_id(ids).await?;
+
+// mutate tracks/text/zones in `items`
+
+client.update_editable_items(items).await?;
+```
 ## Examples
 
 Run the included examples against a running KiCad instance:

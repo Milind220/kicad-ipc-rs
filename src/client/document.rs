@@ -12,9 +12,9 @@ use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;
 use crate::model::common::*;
+use crate::model::editable::*;
 use crate::proto::kiapi::common::commands as common_commands;
 use crate::proto::kiapi::common::types as common_types;
-
 impl KiCadClient {
     /// Reads title block metadata from the active PCB document.
     pub async fn get_title_block_info(&self) -> Result<TitleBlockInfo, KiCadError> {
@@ -189,6 +189,17 @@ impl KiCadClient {
         summarize_item_details(items)
     }
 
+    /// Fetches editable items by id using raw IPC item payloads.
+    ///
+    /// This is an ergonomic wrapper around [`KiCadClient::get_items_by_id_raw`]
+    /// that preserves payloads as editable items for mutate/update workflows.
+    pub async fn get_editable_items_by_id(
+        &self,
+        item_ids: Vec<String>,
+    ) -> Result<Vec<EditablePcbItem>, KiCadError> {
+        let items = self.get_items_by_id_raw(item_ids).await?;
+        items.into_iter().map(EditablePcbItem::from_any).collect()
+    }
     /// Fetches and decodes items by KiCad item id.
     pub async fn get_items_by_id(&self, item_ids: Vec<String>) -> Result<Vec<PcbItem>, KiCadError> {
         let items = self.get_items_by_id_raw(item_ids).await?;
