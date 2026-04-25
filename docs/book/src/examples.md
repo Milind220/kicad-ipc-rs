@@ -29,6 +29,43 @@ fn main() -> Result<(), kicad_ipc_rs::KiCadError> {
 }
 ```
 
+## Example: Editable Item Mutation
+
+Fetch editable tracks, mutate them in place, and write them back as one undoable KiCad commit:
+
+```rust,no_run
+use kicad_ipc_rs::{CommitAction, EditablePcbItem, KiCadClient};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), kicad_ipc_rs::KiCadError> {
+    let client = KiCadClient::connect().await?;
+
+    let trace_type = KiCadClient::pcb_object_type_codes()
+        .iter()
+        .find(|entry| entry.name == "KOT_PCB_TRACE")
+        .expect("trace object type should exist")
+        .code;
+
+    let mut items = client
+        .get_editable_items_by_type_codes(vec![trace_type])
+        .await?;
+
+    for item in &mut items {
+        if let EditablePcbItem::Track(track) = item {
+            track.set_layer_id(0);
+        }
+    }
+
+    let commit = client.begin_commit().await?;
+    client.update_editable_items(items).await?;
+    client
+        .end_commit(commit, CommitAction::Commit, "update editable tracks")
+        .await?;
+
+    Ok(())
+}
+```
+
 ## Example: PCB Analysis - Find Unconnected Nets
 
 Analyze a board to find nets that aren't properly connected:
