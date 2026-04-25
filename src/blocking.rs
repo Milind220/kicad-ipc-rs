@@ -13,7 +13,7 @@ use crate::client::{ClientBuilder, KiCadClient};
 use crate::error::KiCadError;
 use crate::model::board::*;
 use crate::model::common::*;
-
+use crate::model::editable::*;
 const BLOCKING_QUEUE_CAPACITY: usize = 64;
 
 type Job = Box<dyn FnOnce(&tokio::runtime::Runtime) + Send + 'static>;
@@ -449,8 +449,10 @@ impl KiCadClientBlocking {
         fn begin_commit(&self) -> Result<CommitSession, KiCadError>;
         fn create_items_raw(&self, items: Vec<Any>, container_id: Option<String>) -> Result<Any, KiCadError>;
         fn create_items(&self, items: Vec<Any>, container_id: Option<String>) -> Result<Vec<Any>, KiCadError>;
+        fn create_editable_items(&self, items: Vec<EditablePcbItem>, container_id: Option<String>) -> Result<Vec<EditablePcbItem>, KiCadError>;
         fn update_items_raw(&self, items: Vec<Any>) -> Result<Any, KiCadError>;
         fn update_items(&self, items: Vec<Any>) -> Result<Vec<Any>, KiCadError>;
+        fn update_editable_items(&self, items: Vec<EditablePcbItem>) -> Result<Vec<EditablePcbItem>, KiCadError>;
         fn delete_items_raw(&self, item_ids: Vec<String>) -> Result<Any, KiCadError>;
         fn delete_items(&self, item_ids: Vec<String>) -> Result<Vec<String>, KiCadError>;
         fn get_nets(&self) -> Result<Vec<BoardNet>, KiCadError>;
@@ -479,6 +481,7 @@ impl KiCadClientBlocking {
         fn get_items_raw_by_type_codes(&self, type_codes: Vec<i32>) -> Result<Vec<Any>, KiCadError>;
         fn get_items_details_by_type_codes(&self, type_codes: Vec<i32>) -> Result<Vec<SelectionItemDetail>, KiCadError>;
         fn get_items_by_type_codes(&self, type_codes: Vec<i32>) -> Result<Vec<PcbItem>, KiCadError>;
+        fn get_editable_items_by_type_codes(&self, type_codes: Vec<i32>) -> Result<Vec<EditablePcbItem>, KiCadError>;
         fn get_all_pcb_items_raw(&self) -> Result<Vec<(PcbObjectTypeCode, Vec<Any>)>, KiCadError>;
         fn get_all_pcb_items_details(&self) -> Result<Vec<(PcbObjectTypeCode, Vec<SelectionItemDetail>)>, KiCadError>;
         fn get_all_pcb_items(&self) -> Result<Vec<(PcbObjectTypeCode, Vec<PcbItem>)>, KiCadError>;
@@ -489,6 +492,7 @@ impl KiCadClientBlocking {
         fn get_netclass_for_nets_raw(&self, nets: Vec<BoardNet>) -> Result<Any, KiCadError>;
         fn get_netclass_for_nets(&self, nets: Vec<BoardNet>) -> Result<Vec<NetClassForNetEntry>, KiCadError>;
         fn refill_zones(&self, zone_ids: Vec<String>) -> Result<(), KiCadError>;
+        fn refill_all_zones(&self) -> Result<(), KiCadError>;
         fn get_pad_shape_as_polygon_raw(&self, pad_ids: Vec<String>, layer_id: i32) -> Result<Vec<Any>, KiCadError>;
         fn get_pad_shape_as_polygon(&self, pad_ids: Vec<String>, layer_id: i32) -> Result<Vec<PadShapeAsPolygonEntry>, KiCadError>;
         fn check_padstack_presence_on_layers_raw(&self, item_ids: Vec<String>, layer_ids: Vec<i32>) -> Result<Vec<Any>, KiCadError>;
@@ -513,6 +517,7 @@ impl KiCadClientBlocking {
         fn get_selection_as_string(&self) -> Result<SelectionStringDump, KiCadError>;
         fn get_items_by_id_raw(&self, item_ids: Vec<String>) -> Result<Vec<Any>, KiCadError>;
         fn get_items_by_id_details(&self, item_ids: Vec<String>) -> Result<Vec<SelectionItemDetail>, KiCadError>;
+        fn get_editable_items_by_id(&self, item_ids: Vec<String>) -> Result<Vec<EditablePcbItem>, KiCadError>;
         fn get_items_by_id(&self, item_ids: Vec<String>) -> Result<Vec<PcbItem>, KiCadError>;
         fn get_item_bounding_boxes(&self, item_ids: Vec<String>, include_child_text: bool) -> Result<Vec<ItemBoundingBox>, KiCadError>;
         fn hit_test_item(&self, item_id: String, position: Vector2Nm, tolerance_nm: i32) -> Result<ItemHitTestResult, KiCadError>;

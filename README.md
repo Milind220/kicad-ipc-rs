@@ -124,8 +124,36 @@ async fn add_track(client: &KiCadClient) -> Result<(), kicad_ipc_rs::KiCadError>
 }
 ```
 
-## Examples
+For in-place editing flows, fetch editable items, mutate them, then write them back:
 
+```rust
+use kicad_ipc_rs::EditablePcbItem;
+
+let mut items = client.get_editable_items_by_id(ids).await?;
+let back_cu = client.get_active_layer().await?.id;
+
+for item in &mut items {
+    match item {
+        EditablePcbItem::Track(track) => track.set_layer_id(back_cu),
+        EditablePcbItem::BoardText(text) => text.set_layer_id(back_cu),
+        EditablePcbItem::Zone(zone) => zone.set_layer_ids(vec![back_cu]),
+        _ => {}
+    }
+}
+
+client.update_editable_items(items).await?;
+```
+
+### PCB Item Model Layers
+
+- **Raw IPC layer**: `prost_types::Any` payloads from KiCad commands (`*_raw` APIs).
+- **Read model layer**: `PcbItem` for inspection/analysis when you do not need mutation.
+- **Editable model layer**: `EditablePcbItem` for ergonomic mutate/update workflows.
+
+`EditablePcbItem` wrappers also expose `proto()` / `proto_mut()` / `into_proto()` as advanced
+escape hatches when you need direct protobuf access.
+
+## Examples
 Run the included examples against a running KiCad instance:
 
 ```bash

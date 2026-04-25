@@ -1,14 +1,5 @@
 //! Item CRUD operations: create, update, delete, query, and commit workflows.
 
-use crate::envelope;
-use crate::error::KiCadError;
-use crate::model::board::*;
-use crate::model::common::*;
-use crate::proto::kiapi::board::commands as board_commands;
-use crate::proto::kiapi::board::types as board_types;
-use crate::proto::kiapi::common::commands as common_commands;
-use crate::proto::kiapi::common::types as common_types;
-
 use super::decode::*;
 use super::format::*;
 use super::mappers::*;
@@ -20,6 +11,15 @@ use super::{
     RES_END_COMMIT_RESPONSE, RES_GET_ITEMS_RESPONSE, RES_NETCLASS_FOR_NETS_RESPONSE,
     RES_UPDATE_ITEMS_RESPONSE,
 };
+use crate::envelope;
+use crate::error::KiCadError;
+use crate::model::board::*;
+use crate::model::common::*;
+use crate::model::editable::*;
+use crate::proto::kiapi::board::commands as board_commands;
+use crate::proto::kiapi::board::types as board_types;
+use crate::proto::kiapi::common::commands as common_commands;
+use crate::proto::kiapi::common::types as common_types;
 
 impl KiCadClient {
     /// Starts a commit session and returns the raw begin-commit payload.
@@ -117,6 +117,23 @@ impl KiCadClient {
             .collect()
     }
 
+    /// Creates editable items in the active PCB document.
+    ///
+    /// This is an ergonomic wrapper around [`KiCadClient::create_items`] that
+    /// keeps item payloads in editable form.
+    pub async fn create_editable_items(
+        &self,
+        items: Vec<EditablePcbItem>,
+        container_id: Option<String>,
+    ) -> Result<Vec<EditablePcbItem>, KiCadError> {
+        let items: Vec<prost_types::Any> = items.into_iter().map(Into::into).collect();
+        let created_items = self.create_items(items, container_id).await?;
+        created_items
+            .into_iter()
+            .map(EditablePcbItem::try_from)
+            .collect()
+    }
+
     /// Updates items and returns the raw update-items payload.
     pub async fn update_items_raw(
         &self,
@@ -126,7 +143,6 @@ impl KiCadClient {
             header: Some(self.current_board_item_header().await?),
             items,
         };
-
         let response = self
             .send_command(envelope::pack_any(&command, CMD_UPDATE_ITEMS))
             .await?;
@@ -157,6 +173,22 @@ impl KiCadClient {
             .collect()
     }
 
+    /// Updates editable items in the active PCB document.
+    ///
+    /// This is an ergonomic wrapper around [`KiCadClient::update_items`] that
+    /// keeps item payloads in editable form.
+    pub async fn update_editable_items(
+        &self,
+        items: Vec<EditablePcbItem>,
+    ) -> Result<Vec<EditablePcbItem>, KiCadError> {
+        let items: Vec<prost_types::Any> = items.into_iter().map(Into::into).collect();
+        let updated_items = self.update_items(items).await?;
+        updated_items
+            .into_iter()
+            .map(EditablePcbItem::try_from)
+            .collect()
+    }
+
     /// Deletes items and returns the raw delete-items payload.
     pub async fn delete_items_raw(
         &self,
@@ -169,7 +201,6 @@ impl KiCadClient {
                 .map(|value| common_types::Kiid { value })
                 .collect(),
         };
-
         let response = self
             .send_command(envelope::pack_any(&command, CMD_DELETE_ITEMS))
             .await?;
@@ -313,6 +344,15 @@ impl KiCadClient {
         decode_pcb_items(items)
     }
 
+    /// Fetches editable items by KiCad object type codes.
+    pub async fn get_editable_items_by_type_codes(
+        &self,
+        type_codes: Vec<i32>,
+    ) -> Result<Vec<EditablePcbItem>, KiCadError> {
+        let items = self.get_items_raw(type_codes).await?;
+        items.into_iter().map(EditablePcbItem::try_from).collect()
+    }
+
     /// Fetches all known object type buckets and returns raw payloads.
     pub async fn get_all_pcb_items_raw(
         &self,
@@ -322,7 +362,6 @@ impl KiCadClient {
             let items = self.get_items_raw(vec![object_type.code]).await?;
             rows.push((object_type, items));
         }
-
         Ok(rows)
     }
 

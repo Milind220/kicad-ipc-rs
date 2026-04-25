@@ -34,6 +34,14 @@ impl KiCadClient {
         let _ = response_payload_as_any(response, RES_PROTOBUF_EMPTY)?;
         Ok(())
     }
+
+    /// Rebuilds fill geometry for all zones in the current board.
+    ///
+    /// The KiCad IPC proto defines an empty `zones` list as "all zones".
+    pub async fn refill_all_zones(&self) -> Result<(), KiCadError> {
+        self.refill_zones(Vec::new()).await
+    }
+
     /// Returns pad polygon responses as raw protobuf payloads.
     pub async fn get_pad_shape_as_polygon_raw(
         &self,
@@ -43,7 +51,6 @@ impl KiCadClient {
         if pad_ids.is_empty() {
             return Ok(Vec::new());
         }
-
         let board = self.current_board_document_proto().await?;
         let mut payloads = Vec::new();
         for chunk in pad_ids.chunks(PAD_QUERY_CHUNK_SIZE) {
