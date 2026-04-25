@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4](https://github.com/Milind220/kicad-ipc-rs/compare/v0.4.3...v0.4.4) - 2026-04-25
+
+### Added
+
+- add editable PCB item mutation layer ([#28](https://github.com/Milind220/kicad-ipc-rs/pull/28))
+
 ## [0.4.3](https://github.com/Milind220/kicad-ipc-rs/compare/v0.4.2...v0.4.3) - 2026-03-29
 
 ### Other
