@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d232c1e0.js";
+            window.path_to_searchindex_js = "searchindex-e7da7fc2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -201,10 +201,41 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 <p>Use begin/end commit around mutating commands.</p>
 <ol>
 <li><code>begin_commit(...)</code></li>
-<li><code>create_items(...)</code> / <code>update_items(...)</code> / <code>delete_items(...)</code></li>
+<li><code>create_items(...)</code> / <code>update_items(...)</code> / <code>update_editable_items(...)</code> / <code>delete_items(...)</code></li>
 <li><code>end_commit(..., CommitAction::Commit, ...)</code></li>
 </ol>
 <p>If errors mid-flight: close with <code>CommitAction::Abort</code>/<code>Drop</code> per flow.</p>
+<h2 id="pattern-editable-item-mutation"><a class="header" href="#pattern-editable-item-mutation">Pattern: Editable Item Mutation</a></h2>
+<p>Use <code>EditablePcbItem</code> when you want to round-trip existing board items without manually decoding and packing protobuf <code>Any</code> payloads.</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::{CommitAction, EditablePcbItem, KiCadClient};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClient::connect().await?;
+    let commit = client.begin_commit().await?;
+
+    let mut items = client.get_editable_items_by_type_codes(vec![
+        KiCadClient::pcb_object_type_codes()
+            .iter()
+            .find(|entry| entry.name == "KOT_PCB_TRACE")
+            .expect("trace object type should exist")
+            .code,
+    ]).await?;
+
+    for item in &amp;mut items {
+        if let EditablePcbItem::Track(track) = item {
+            track.set_layer_id(0);
+        }
+    }
+
+    client.update_editable_items(items).await?;
+    client
+        .end_commit(commit, CommitAction::Commit, "move tracks to layer")
+        .await?;
+
+    Ok(())
+}</code></pre>
+<p>Prefer typed wrapper methods like <code>set_layer_id</code>, <code>set_layer_ids</code>, and position setters. Use <code>proto_mut()</code> only for advanced cases where the typed editable API does not yet expose the field you need.</p>
 <h2 id="common-pitfalls"><a class="header" href="#common-pitfalls">Common Pitfalls</a></h2>
 <div class="table-wrapper">
 <table>
@@ -217,6 +248,7 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 <tr><td>Mix sync + async API unintentionally</td><td>duplicate runtime ownership</td><td>pick one surface per process</td></tr>
 <tr><td>Fire write commands without commit session</td><td>partial or rejected mutations</td><td>always bracket writes with commit APIs</td></tr>
 <tr><td>Hardcode unsupported commands</td><td><code>AS_UNHANDLED</code> at runtime</td><td>map/handle <code>RunActionStatus</code> and runtime flags</td></tr>
+<tr><td>Use read models for mutation</td><td>no way to write the item back losslessly</td><td>fetch <code>EditablePcbItem</code> instead of <code>PcbItem</code></td></tr>
 </tbody>
 </table>
 </div>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d232c1e0.js";
+            window.path_to_searchindex_js = "searchindex-e7da7fc2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -196,6 +196,38 @@ fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
     let client = KiCadClientBlocking::connect()?;
     let has_board = client.has_open_board()?;
     println!("open board: {}", has_board);
+    Ok(())
+}</code></pre>
+<h2 id="example-editable-item-mutation"><a class="header" href="#example-editable-item-mutation">Example: Editable Item Mutation</a></h2>
+<p>Fetch editable tracks, mutate them in place, and write them back as one undoable KiCad commit:</p>
+<pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::{CommitAction, EditablePcbItem, KiCadClient};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
+    let client = KiCadClient::connect().await?;
+
+    let trace_type = KiCadClient::pcb_object_type_codes()
+        .iter()
+        .find(|entry| entry.name == "KOT_PCB_TRACE")
+        .expect("trace object type should exist")
+        .code;
+
+    let mut items = client
+        .get_editable_items_by_type_codes(vec![trace_type])
+        .await?;
+
+    for item in &amp;mut items {
+        if let EditablePcbItem::Track(track) = item {
+            track.set_layer_id(0);
+        }
+    }
+
+    let commit = client.begin_commit().await?;
+    client.update_editable_items(items).await?;
+    client
+        .end_commit(commit, CommitAction::Commit, "update editable tracks")
+        .await?;
+
     Ok(())
 }</code></pre>
 <h2 id="example-pcb-analysis---find-unconnected-nets"><a class="header" href="#example-pcb-analysis---find-unconnected-nets">Example: PCB Analysis - Find Unconnected Nets</a></h2>

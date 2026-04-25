@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d232c1e0.js";
+            window.path_to_searchindex_js = "searchindex-e7da7fc2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -189,6 +189,20 @@
 <li><code>KiCadError</code></li>
 <li>Typed models under <code>model::*</code></li>
 </ul>
+<p>PCB item API layers:</p>
+<ul>
+<li>Raw IPC: <code>*_raw</code> methods return <code>prost_types::Any</code> payloads for direct protobuf interop.</li>
+<li>Read model: <code>PcbItem</code> and related <code>Pcb*</code> structs are lightweight decoded models for inspection.</li>
+<li>Editable model: <code>EditablePcbItem</code> and typed wrappers preserve the full protobuf payload for mutate/update workflows.</li>
+</ul>
+<p>Editable item helpers:</p>
+<ul>
+<li><code>get_editable_items_by_id(...)</code></li>
+<li><code>get_editable_items_by_type_codes(...)</code></li>
+<li><code>create_editable_items(...)</code></li>
+<li><code>update_editable_items(...)</code></li>
+</ul>
+<p>Use <code>EditablePcbItem</code> when you need to fetch existing board items, mutate fields like layer or position, and write them back through KiCad IPC without hand-building protobuf <code>Any</code> payloads. The editable wrappers expose <code>proto()</code>, <code>proto_mut()</code>, and <code>into_proto()</code> as advanced escape hatches when typed helpers are not enough.</p>
 <p>Selection API notes:</p>
 <ul>
 <li><code>get_selection_*</code> methods now take <code>type_codes: Vec&lt;i32&gt;</code> (<code>Vec::new()</code> means no filter).</li>

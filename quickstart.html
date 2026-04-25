@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d232c1e0.js";
+            window.path_to_searchindex_js = "searchindex-e7da7fc2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -187,7 +187,7 @@
 <h2 id="async-api-default"><a class="header" href="#async-api-default">Async API (default)</a></h2>
 <p><code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependencies]
-kicad-ipc-rs = "0.4.1"
+kicad-ipc-rs = "0.4.3"
 tokio = { version = "1", features = ["macros", "rt"] }
 </code></pre>
 <pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClient;
@@ -207,7 +207,7 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 <h2 id="blocking-api"><a class="header" href="#blocking-api">Blocking API</a></h2>
 <p><code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependencies]
-kicad-ipc-rs = { version = "0.4.1", features = ["blocking"] }
+kicad-ipc-rs = { version = "0.4.3", features = ["blocking"] }
 </code></pre>
 <pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClientBlocking;
 
