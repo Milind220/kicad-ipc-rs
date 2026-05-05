@@ -7,11 +7,10 @@ use std::time::Duration;
 
 #[cfg(feature = "blocking")]
 use kicad_ipc_rs::{
-    KiCadClient, KiCadClientBlocking, KiCadError, PcbArc, PcbBoardGraphicShape, PcbBoardText,
-    PcbBoardTextBox, PcbDimension, PcbField, PcbFootprint, PcbGroup, PcbItem, PcbPad, PcbTrack,
-    PcbVia, PcbZone,
+    BoardNet, KiCadClient, KiCadClientBlocking, KiCadError, PcbArc, PcbBoardGraphicShape,
+    PcbBoardText, PcbBoardTextBox, PcbDimension, PcbField, PcbFootprint, PcbGroup, PcbItem, PcbPad,
+    PcbTrack, PcbVia, PcbZone,
 };
-
 #[cfg(feature = "blocking")]
 fn retry<T, F>(label: &str, mut op: F) -> Result<T, KiCadError>
 where
@@ -48,10 +47,11 @@ fn item_id(item: &PcbItem) -> Option<&str> {
         PcbItem::Zone(v) => v.id.as_deref(),
         PcbItem::Dimension(v) => v.id.as_deref(),
         PcbItem::Group(v) => v.id.as_deref(),
+        PcbItem::ReferenceImage(v) => v.id.as_deref(),
+        PcbItem::Barcode(v) => v.id.as_deref(),
         PcbItem::Unknown(_) => None,
     }
 }
-
 #[cfg(feature = "blocking")]
 fn pcb_type_code(name: &str) -> Option<i32> {
     KiCadClient::pcb_object_type_codes()
@@ -290,12 +290,28 @@ fn print_item(item: &PcbItem) {
                 item_count
             );
         }
+        PcbItem::ReferenceImage(v) => {
+            println!(
+                "  reference_image id={} layer={} image_data_len={}",
+                v.id.as_deref().unwrap_or("-"),
+                v.layer.name,
+                v.image_data_len
+            );
+        }
+        PcbItem::Barcode(v) => {
+            println!(
+                "  barcode id={} layer={} kind={:?} text={}",
+                v.id.as_deref().unwrap_or("-"),
+                v.layer.name,
+                v.kind,
+                v.text
+            );
+        }
         PcbItem::Unknown(v) => {
             println!("  unknown type={} raw_len={}", v.type_url, v.raw_len);
         }
     }
 }
-
 #[cfg(feature = "blocking")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = KiCadClientBlocking::connect()?;
@@ -489,16 +505,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         name_to_code.insert(net.name, net.code);
     }
 
-    let mut selected_net_codes = Vec::new();
+    let mut selected_nets = Vec::new();
     for name in &selected_net_names {
         if let Some(code) = name_to_code.get(name) {
-            selected_net_codes.push(*code);
+            selected_nets.push(BoardNet {
+                code: *code,
+                name: name.clone(),
+            });
         }
     }
-    selected_net_codes.sort_unstable();
-    selected_net_codes.dedup();
-    println!("selected_net_codes={:?}", selected_net_codes);
-
+    selected_nets.sort_by_key(|net| net.code);
+    selected_nets.dedup_by_key(|net| net.code);
+    println!("selected_nets={:?}", selected_nets);
     let route_type_codes: Vec<i32> = [
         "KOT_PCB_TRACE",
         "KOT_PCB_VIA",
@@ -512,9 +530,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .collect();
     println!("route_type_codes={route_type_codes:?}");
 
-    if !selected_net_codes.is_empty() && !route_type_codes.is_empty() {
+    if !selected_nets.is_empty() && !route_type_codes.is_empty() {
         match retry("get_items_by_net", || {
-            client.get_items_by_net(route_type_codes.clone(), selected_net_codes.clone())
+            client.get_items_by_net(route_type_codes.clone(), selected_nets.clone())
         }) {
             Ok(connected_items) => {
                 let mut counts: BTreeMap<&'static str, usize> = BTreeMap::new();

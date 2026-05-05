@@ -27,10 +27,11 @@ pub enum EditablePcbItemKind {
     Group,
     /// A board reference image.
     ReferenceImage,
+    /// A board barcode.
+    Barcode,
     /// A payload whose type URL is not recognized by this crate version.
     Unknown,
 }
-
 /// Layer presence model for editable PCB items.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LayerSet {

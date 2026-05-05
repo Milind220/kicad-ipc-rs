@@ -41,10 +41,11 @@ pub enum EditablePcbItem {
     Group(GroupItem),
     /// Reference image item.
     ReferenceImage(ReferenceImageItem),
+    /// Barcode item.
+    Barcode(BarcodeItem),
     /// Unknown payload preserved as-is.
     Unknown(RawPcbItem),
 }
-
 impl EditablePcbItem {
     /// Decodes a raw protobuf payload into a typed editable PCB item.
     pub fn from_any(raw: Any) -> Result<Self, KiCadError> {
@@ -125,10 +126,15 @@ impl EditablePcbItem {
                 decode_item(&raw, pcb_item_type_urls::REFERENCE_IMAGE)?,
             )));
         }
+        if type_url == envelope::type_url(pcb_item_type_urls::BARCODE) {
+            return Ok(Self::Barcode(BarcodeItem::from_proto(decode_item(
+                &raw,
+                pcb_item_type_urls::BARCODE,
+            )?)));
+        }
 
         Ok(Self::Unknown(RawPcbItem { raw }))
     }
-
     /// Converts this editable item into a raw protobuf payload.
     pub fn into_any(self) -> Any {
         match self {
@@ -155,10 +161,10 @@ impl EditablePcbItem {
             Self::ReferenceImage(item) => {
                 envelope::pack_any(&item.proto, pcb_item_type_urls::REFERENCE_IMAGE)
             }
+            Self::Barcode(item) => envelope::pack_any(&item.proto, pcb_item_type_urls::BARCODE),
             Self::Unknown(item) => item.raw,
         }
     }
-
     /// Clones and returns this item as a raw protobuf payload.
     pub fn as_any(&self) -> Any {
         self.clone().into_any()
@@ -180,10 +186,10 @@ impl EditablePcbItem {
             Self::Dimension(_) => EditablePcbItemKind::Dimension,
             Self::Group(_) => EditablePcbItemKind::Group,
             Self::ReferenceImage(_) => EditablePcbItemKind::ReferenceImage,
+            Self::Barcode(_) => EditablePcbItemKind::Barcode,
             Self::Unknown(_) => EditablePcbItemKind::Unknown,
         }
     }
-
     /// Returns the KIID-based item id when the underlying proto has one.
     ///
     /// For `Field`, this intentionally returns `None` because fields use `FieldId`
@@ -202,11 +208,11 @@ impl EditablePcbItem {
             Self::Zone(item) => item.id(),
             Self::Dimension(item) => item.id(),
             Self::Group(item) => item.id(),
-            Self::ReferenceImage(_) => None,
+            Self::ReferenceImage(item) => item.id(),
+            Self::Barcode(item) => item.id(),
             Self::Unknown(_) => None,
         }
     }
-
     /// Returns layer-set semantics for this item.
     pub fn layer_set(&self) -> LayerSet {
         match self {
@@ -225,11 +231,11 @@ impl EditablePcbItem {
             Self::Zone(item) => LayerSet::Multi(item.proto.layers.clone()),
             Self::Dimension(item) => LayerSet::Single(item.layer_id()),
             Self::Group(_) => LayerSet::None,
-            Self::ReferenceImage(_) => LayerSet::None,
+            Self::ReferenceImage(item) => LayerSet::Single(item.layer_id()),
+            Self::Barcode(item) => LayerSet::Single(item.layer_id()),
             Self::Unknown(_) => LayerSet::None,
         }
     }
-
     /// Attempts to set the layer id for single-layer items.
     pub fn set_layer_id(&mut self, layer_id: i32) -> Result<(), KiCadError> {
         match self {
@@ -262,15 +268,21 @@ impl EditablePcbItem {
                 item.set_layer_id(layer_id);
                 Ok(())
             }
+            Self::ReferenceImage(item) => {
+                item.set_layer_id(layer_id);
+                Ok(())
+            }
+            Self::Barcode(item) => {
+                item.set_layer_id(layer_id);
+                Ok(())
+            }
             Self::Via(_) => unsupported_set_layer("via"),
             Self::Pad(_) => unsupported_set_layer("pad"),
             Self::Zone(_) => unsupported_set_layer("zone"),
             Self::Group(_) => unsupported_set_layer("group"),
-            Self::ReferenceImage(_) => unsupported_set_layer("reference_image"),
             Self::Unknown(_) => unsupported_set_layer("unknown"),
         }
     }
-
     /// Attempts to replace layer ids for multi-layer items.
     pub fn set_layer_ids(&mut self, layer_ids: Vec<i32>) -> Result<(), KiCadError> {
         match self {

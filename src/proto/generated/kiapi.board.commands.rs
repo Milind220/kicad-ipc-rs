@@ -112,16 +112,17 @@ pub struct GetItemsByNet {
     /// Specifies which document to query, which fields to return, etc.
     #[prost(message, optional, tag = "1")]
     pub header: ::core::option::Option<super::super::common::types::ItemHeader>,
-    /// List of one or more types of items to retreive
+    /// Optional list of item types to filter by.  If not provided, will return pads, vias,
+    /// tracks, and zones.
     #[prost(
         enumeration = "super::super::common::types::KiCadObjectType",
         repeated,
         tag = "2"
     )]
     pub types: ::prost::alloc::vec::Vec<i32>,
-    /// A list of net codes to filter items by
-    #[prost(message, repeated, tag = "3")]
-    pub net_codes: ::prost::alloc::vec::Vec<super::types::NetCode>,
+    /// A list of nets to filter items by
+    #[prost(message, repeated, tag = "4")]
+    pub nets: ::prost::alloc::vec::Vec<super::types::Net>,
 }
 /// Retrieve all the copper items belonging to a certain net class or set of net classes
 /// returns kiapi.common.commands.GetItemsResponse
@@ -130,7 +131,8 @@ pub struct GetItemsByNetClass {
     /// Specifies which document to query, which fields to return, etc.
     #[prost(message, optional, tag = "1")]
     pub header: ::core::option::Option<super::super::common::types::ItemHeader>,
-    /// List of one or more types of items to retreive
+    /// Optional list of item types to filter by.  If not provided, will return pads, vias,
+    /// tracks, and zones.
     #[prost(
         enumeration = "super::super::common::types::KiCadObjectType",
         repeated,
@@ -140,6 +142,24 @@ pub struct GetItemsByNetClass {
     /// A list of net class names to filter items by
     #[prost(string, repeated, tag = "3")]
     pub net_classes: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Retrieve all copper-connected items connected to one or more source items
+/// returns kiapi.common.commands.GetItemsResponse
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetConnectedItems {
+    /// Specifies which document to query, which fields to return, etc.
+    #[prost(message, optional, tag = "1")]
+    pub header: ::core::option::Option<super::super::common::types::ItemHeader>,
+    /// One or more item IDs used as the source set for connectivity queries
+    #[prost(message, repeated, tag = "2")]
+    pub items: ::prost::alloc::vec::Vec<super::super::common::types::Kiid>,
+    /// Optional list of item types to return. If empty, all connected item types are returned.
+    #[prost(
+        enumeration = "super::super::common::types::KiCadObjectType",
+        repeated,
+        tag = "3"
+    )]
+    pub types: ::prost::alloc::vec::Vec<i32>,
 }
 /// A net may be part of multiple classes that have a priority ordering, which will result in a
 /// composite "effective" netclass containing the merged/overridden properties of all the constituent

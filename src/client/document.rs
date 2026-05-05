@@ -5,8 +5,9 @@ use super::mappers::*;
 use super::{
     KiCadClient, CMD_GET_ITEMS_BY_ID, CMD_GET_TITLE_BLOCK_INFO, CMD_REVERT_DOCUMENT,
     CMD_SAVE_COPY_OF_DOCUMENT, CMD_SAVE_DOCUMENT, CMD_SAVE_DOCUMENT_TO_STRING,
-    CMD_SAVE_SELECTION_TO_STRING, RES_GET_ITEMS_RESPONSE, RES_PROTOBUF_EMPTY,
-    RES_SAVED_DOCUMENT_RESPONSE, RES_SAVED_SELECTION_RESPONSE, RES_TITLE_BLOCK_INFO,
+    CMD_SAVE_SELECTION_TO_STRING, CMD_SET_TITLE_BLOCK_INFO, RES_GET_ITEMS_RESPONSE,
+    RES_PROTOBUF_EMPTY, RES_SAVED_DOCUMENT_RESPONSE, RES_SAVED_SELECTION_RESPONSE,
+    RES_TITLE_BLOCK_INFO,
 };
 use crate::envelope;
 use crate::error::KiCadError;
@@ -28,28 +29,32 @@ impl KiCadClient {
         let payload: common_types::TitleBlockInfo =
             envelope::unpack_any(&response, RES_TITLE_BLOCK_INFO)?;
 
-        let comments = vec![
-            payload.comment1,
-            payload.comment2,
-            payload.comment3,
-            payload.comment4,
-            payload.comment5,
-            payload.comment6,
-            payload.comment7,
-            payload.comment8,
-            payload.comment9,
-        ]
-        .into_iter()
-        .filter(|comment| !comment.is_empty())
-        .collect();
+        Ok(title_block_info_from_proto(payload))
+    }
 
-        Ok(TitleBlockInfo {
-            title: payload.title,
-            date: payload.date,
-            revision: payload.revision,
-            company: payload.company,
-            comments,
-        })
+    /// Sets title block metadata on the active PCB document and returns raw operation payload.
+    pub async fn set_title_block_info_raw(
+        &self,
+        title_block: TitleBlockInfo,
+    ) -> Result<prost_types::Any, KiCadError> {
+        let command = common_commands::SetTitleBlockInfo {
+            document: Some(self.current_board_document_proto().await?),
+            title_block: Some(title_block_info_to_proto(title_block)),
+        };
+
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_SET_TITLE_BLOCK_INFO))
+            .await?;
+        response_payload_as_any(response, RES_PROTOBUF_EMPTY)
+    }
+
+    /// Sets title block metadata on the active PCB document.
+    pub async fn set_title_block_info(
+        &self,
+        title_block: TitleBlockInfo,
+    ) -> Result<(), KiCadError> {
+        let _ = self.set_title_block_info_raw(title_block).await?;
+        Ok(())
     }
 
     /// Saves the active PCB document and returns the raw operation payload.
@@ -204,5 +209,51 @@ impl KiCadClient {
     pub async fn get_items_by_id(&self, item_ids: Vec<String>) -> Result<Vec<PcbItem>, KiCadError> {
         let items = self.get_items_by_id_raw(item_ids).await?;
         decode_pcb_items(items)
+    }
+}
+
+fn title_block_info_from_proto(payload: common_types::TitleBlockInfo) -> TitleBlockInfo {
+    let comments = vec![
+        payload.comment1,
+        payload.comment2,
+        payload.comment3,
+        payload.comment4,
+        payload.comment5,
+        payload.comment6,
+        payload.comment7,
+        payload.comment8,
+        payload.comment9,
+    ]
+    .into_iter()
+    .filter(|comment| !comment.is_empty())
+    .collect();
+
+    TitleBlockInfo {
+        title: payload.title,
+        date: payload.date,
+        revision: payload.revision,
+        company: payload.company,
+        comments,
+    }
+}
+
+fn title_block_info_to_proto(title_block: TitleBlockInfo) -> common_types::TitleBlockInfo {
+    let mut comments = title_block.comments;
+    comments.truncate(9);
+
+    common_types::TitleBlockInfo {
+        title: title_block.title,
+        date: title_block.date,
+        revision: title_block.revision,
+        company: title_block.company,
+        comment1: comments.first().cloned().unwrap_or_default(),
+        comment2: comments.get(1).cloned().unwrap_or_default(),
+        comment3: comments.get(2).cloned().unwrap_or_default(),
+        comment4: comments.get(3).cloned().unwrap_or_default(),
+        comment5: comments.get(4).cloned().unwrap_or_default(),
+        comment6: comments.get(5).cloned().unwrap_or_default(),
+        comment7: comments.get(6).cloned().unwrap_or_default(),
+        comment8: comments.get(7).cloned().unwrap_or_default(),
+        comment9: comments.get(8).cloned().unwrap_or_default(),
     }
 }

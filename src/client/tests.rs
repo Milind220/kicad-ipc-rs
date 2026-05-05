@@ -28,7 +28,8 @@ mod tests {
         text_spec_to_proto, KiCadError, KIPRJMOD_ENV, PCB_OBJECT_TYPES,
     };
     use crate::model::board::{
-        BoardLayerInfo, BoardStackup, BoardStackupLayer, BoardStackupLayerType, PcbItem, PcbViaType,
+        BoardLayerInfo, BoardStackup, BoardStackupLayer, BoardStackupLayerType,
+        PcbBarcodeErrorCorrection, PcbBarcodeKind, PcbItem, PcbViaType,
     };
     use crate::model::common::{
         CommitAction, DocumentSpecifier, DocumentType, ProjectInfo, TextAttributesSpec,
@@ -818,6 +819,97 @@ mod tests {
                 );
             }
             other => panic!("expected board text item, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn decode_pcb_item_maps_reference_image() {
+        let reference_image = crate::proto::kiapi::board::types::ReferenceImage {
+            id: Some(crate::proto::kiapi::common::types::Kiid {
+                value: "ref-image-id".to_string(),
+            }),
+            layer: crate::proto::kiapi::board::types::BoardLayer::BlDwgsUser as i32,
+            position: Some(crate::proto::kiapi::common::types::Vector2 {
+                x_nm: 1000,
+                y_nm: 2000,
+            }),
+            transform_origin_offset: Some(crate::proto::kiapi::common::types::Vector2 {
+                x_nm: 10,
+                y_nm: 20,
+            }),
+            image_scale: Some(crate::proto::kiapi::common::types::Ratio { value: 1.25 }),
+            image_data: vec![1, 2, 3, 4],
+            locked: crate::proto::kiapi::common::types::LockedState::LsLocked as i32,
+        };
+
+        let item = prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.types.ReferenceImage"),
+            value: reference_image.encode_to_vec(),
+        };
+
+        let parsed = decode_pcb_item(item).expect("reference image payload should decode");
+        match parsed {
+            PcbItem::ReferenceImage(reference_image) => {
+                assert_eq!(reference_image.id.as_deref(), Some("ref-image-id"));
+                assert_eq!(reference_image.layer.name, "BL_Dwgs_User");
+                assert_eq!(
+                    reference_image.position_nm.map(|p| (p.x_nm, p.y_nm)),
+                    Some((1000, 2000))
+                );
+                assert_eq!(reference_image.image_scale, Some(1.25));
+                assert_eq!(reference_image.image_data_len, 4);
+                assert_eq!(
+                    reference_image.locked,
+                    crate::model::board::ItemLockState::Locked
+                );
+            }
+            other => panic!("expected reference image item, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn decode_pcb_item_maps_barcode() {
+        let barcode = crate::proto::kiapi::board::types::Barcode {
+            id: Some(crate::proto::kiapi::common::types::Kiid {
+                value: "barcode-id".to_string(),
+            }),
+            text: "HELLO".to_string(),
+            kind: crate::proto::kiapi::board::types::BarcodeKind::BkQrCode as i32,
+            error_correction: crate::proto::kiapi::board::types::BarcodeErrorCorrection::BecM
+                as i32,
+            position: Some(crate::proto::kiapi::common::types::Vector2 { x_nm: 5, y_nm: 6 }),
+            orientation: Some(crate::proto::kiapi::common::types::Angle {
+                value_degrees: 90.0,
+            }),
+            layer: crate::proto::kiapi::board::types::BoardLayer::BlFSilkS as i32,
+            width: Some(crate::proto::kiapi::common::types::Distance { value_nm: 700 }),
+            height: Some(crate::proto::kiapi::common::types::Distance { value_nm: 800 }),
+            show_text: true,
+            text_height: Some(crate::proto::kiapi::common::types::Distance { value_nm: 120 }),
+            knockout: true,
+            knockout_margin: Some(crate::proto::kiapi::common::types::Vector2 { x_nm: 3, y_nm: 4 }),
+            locked: crate::proto::kiapi::common::types::LockedState::LsUnlocked as i32,
+        };
+
+        let item = prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.types.Barcode"),
+            value: barcode.encode_to_vec(),
+        };
+
+        let parsed = decode_pcb_item(item).expect("barcode payload should decode");
+        match parsed {
+            PcbItem::Barcode(barcode) => {
+                assert_eq!(barcode.id.as_deref(), Some("barcode-id"));
+                assert_eq!(barcode.text, "HELLO");
+                assert_eq!(barcode.kind, PcbBarcodeKind::QrCode);
+                assert_eq!(barcode.error_correction, PcbBarcodeErrorCorrection::M);
+                assert_eq!(barcode.orientation_deg, Some(90.0));
+                assert!(barcode.show_text);
+                assert!(barcode.knockout);
+                assert_eq!(barcode.width_nm, Some(700));
+                assert_eq!(barcode.height_nm, Some(800));
+            }
+            other => panic!("expected barcode item, got {other:?}"),
         }
     }
 

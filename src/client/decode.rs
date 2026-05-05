@@ -86,10 +86,32 @@ pub(crate) fn map_zone_type(value: i32) -> PcbZoneType {
     }
 }
 
+pub(crate) fn map_barcode_kind(value: i32) -> PcbBarcodeKind {
+    match board_types::BarcodeKind::try_from(value) {
+        Ok(board_types::BarcodeKind::BkUnknown) => PcbBarcodeKind::Unknown,
+        Ok(board_types::BarcodeKind::BkCode39) => PcbBarcodeKind::Code39,
+        Ok(board_types::BarcodeKind::BkCode128) => PcbBarcodeKind::Code128,
+        Ok(board_types::BarcodeKind::BkDataMatrix) => PcbBarcodeKind::DataMatrix,
+        Ok(board_types::BarcodeKind::BkQrCode) => PcbBarcodeKind::QrCode,
+        Ok(board_types::BarcodeKind::BkMicroQrCode) => PcbBarcodeKind::MicroQrCode,
+        Err(_) => PcbBarcodeKind::Unrecognized(value),
+    }
+}
+
+pub(crate) fn map_barcode_error_correction(value: i32) -> PcbBarcodeErrorCorrection {
+    match board_types::BarcodeErrorCorrection::try_from(value) {
+        Ok(board_types::BarcodeErrorCorrection::BecUnknown) => PcbBarcodeErrorCorrection::Unknown,
+        Ok(board_types::BarcodeErrorCorrection::BecL) => PcbBarcodeErrorCorrection::L,
+        Ok(board_types::BarcodeErrorCorrection::BecM) => PcbBarcodeErrorCorrection::M,
+        Ok(board_types::BarcodeErrorCorrection::BecQ) => PcbBarcodeErrorCorrection::Q,
+        Ok(board_types::BarcodeErrorCorrection::BecH) => PcbBarcodeErrorCorrection::H,
+        Err(_) => PcbBarcodeErrorCorrection::Unrecognized(value),
+    }
+}
+
 pub(crate) fn decode_pcb_items(items: Vec<prost_types::Any>) -> Result<Vec<PcbItem>, KiCadError> {
     items.into_iter().map(decode_pcb_item).collect()
 }
-
 pub(crate) fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadError> {
     if item.type_url == envelope::type_url("kiapi.board.types.Track") {
         let track = decode_any::<board_types::Track>(&item, "kiapi.board.types.Track")?;
@@ -468,6 +490,40 @@ pub(crate) fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadEr
         }));
     }
 
+    if item.type_url == envelope::type_url("kiapi.board.types.ReferenceImage") {
+        let reference_image =
+            decode_any::<board_types::ReferenceImage>(&item, "kiapi.board.types.ReferenceImage")?;
+        return Ok(PcbItem::ReferenceImage(PcbReferenceImage {
+            id: reference_image.id.map(|id| id.value),
+            layer: layer_to_model(reference_image.layer),
+            position_nm: reference_image.position.map(map_vector2_nm),
+            transform_origin_offset_nm: reference_image.transform_origin_offset.map(map_vector2_nm),
+            image_scale: reference_image.image_scale.map(|ratio| ratio.value),
+            image_data_len: reference_image.image_data.len(),
+            locked: map_lock_state(reference_image.locked),
+        }));
+    }
+
+    if item.type_url == envelope::type_url("kiapi.board.types.Barcode") {
+        let barcode = decode_any::<board_types::Barcode>(&item, "kiapi.board.types.Barcode")?;
+        return Ok(PcbItem::Barcode(PcbBarcode {
+            id: barcode.id.map(|id| id.value),
+            text: barcode.text,
+            kind: map_barcode_kind(barcode.kind),
+            error_correction: map_barcode_error_correction(barcode.error_correction),
+            position_nm: barcode.position.map(map_vector2_nm),
+            orientation_deg: barcode.orientation.map(|angle| angle.value_degrees),
+            layer: layer_to_model(barcode.layer),
+            width_nm: map_optional_distance_nm(barcode.width),
+            height_nm: map_optional_distance_nm(barcode.height),
+            show_text: barcode.show_text,
+            text_height_nm: map_optional_distance_nm(barcode.text_height),
+            knockout: barcode.knockout,
+            knockout_margin_nm: barcode.knockout_margin.map(map_vector2_nm),
+            locked: map_lock_state(barcode.locked),
+        }));
+    }
+
     if item.type_url == envelope::type_url("kiapi.board.types.Group") {
         let group = decode_any::<board_types::Group>(&item, "kiapi.board.types.Group")?;
         return Ok(PcbItem::Group(PcbGroup {
@@ -477,7 +533,6 @@ pub(crate) fn decode_pcb_item(item: prost_types::Any) -> Result<PcbItem, KiCadEr
             item_ids: group.items.into_iter().map(|item| item.value).collect(),
         }));
     }
-
     Ok(PcbItem::Unknown(PcbUnknownItem {
         type_url: item.type_url,
         raw_len: item.value.len(),

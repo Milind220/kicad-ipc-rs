@@ -8,23 +8,21 @@
 
 ### Key Features
 
-- **100% API Coverage**: All 57 KiCad v10.0.0 API commands implemented
+- **100% API Coverage**: All 59 KiCad v10.0.1 API commands implemented
 - **Type-Safe Models**: Native Rust structs for tracks, vias, footprints, nets, and more
 - **Dual API**: Async-first design with full synchronous support via `blocking` feature
 - **Zero Protobuf Hassle**: Pre-generated types — no KiCad source checkout needed
 - **Battle-Tested**: Used in real automation and integration workflows
 
 ### API Comparison
-
 | Capability | `kicad-ipc-rs` | Python bindings | Official Rust |
 |------------|---------------|-----------------|---------------|
 | Rust-native API | ✅ Production-ready | ❌ Python only | ⚠️ Preview |
 | Async + Sync | ✅ Both supported | ⚠️ Event-loop | ⚠️ Preview |
-| Complete coverage | ✅ 57/57 commands | Unknown | Unknown |
+| Complete coverage | ✅ 59/59 commands | Unknown | Unknown |
 | Active maintenance | ✅ Yes | ✅ Official | ⚠️ Preview |
 
 ## Project Goals
-
 - Rust-native API for all KiCad IPC commands
 - Typed, ergonomic models for board and editor operations
 - Full parity between async and blocking APIs
@@ -34,11 +32,10 @@
 ## Current Scope
 
 - KiCad API proto snapshot pinned in repo (`src/proto/generated/`)
-- 57/57 wrapped command families from KiCad v10.0.0
-- Runtime compatibility verified against KiCad 10.0.0
+- 59/59 wrapped command families from KiCad v10.0.1
+- Runtime compatibility verified against KiCad 10.0.1
 
 ## Core Entrypoints
-
 - **Async**: `kicad_ipc_rs::KiCadClient`
 - **Blocking**: `kicad_ipc_rs::KiCadClientBlocking` (enable `blocking` feature)
 - **Errors**: `kicad_ipc_rs::KiCadError`
