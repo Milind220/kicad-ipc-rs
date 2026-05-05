@@ -27,6 +27,8 @@ Recommended order for board-aware reads:
 
 Reason: fail fast on document state before expensive item traversal.
 
+KiCad 10.0.1 note: for `get_items_by_net(...)`, treat net names as authoritative and net codes as legacy compatibility fields.
+
 ## Pattern: Safe Write Session
 
 Use begin/end commit around mutating commands.

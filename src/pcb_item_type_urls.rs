@@ -11,3 +11,4 @@ pub(crate) const ZONE: &str = "kiapi.board.types.Zone";
 pub(crate) const DIMENSION: &str = "kiapi.board.types.Dimension";
 pub(crate) const GROUP: &str = "kiapi.board.types.Group";
 pub(crate) const REFERENCE_IMAGE: &str = "kiapi.board.types.ReferenceImage";
+pub(crate) const BARCODE: &str = "kiapi.board.types.Barcode";

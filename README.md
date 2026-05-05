@@ -2,27 +2,34 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Milind220/kicad-ipc-rust)
 
-Control KiCad programmatically from Rust. The most complete, production-ready client for KiCad's IPC API — async-first with full sync support.
-
-- **100% API coverage** (57/57 KiCad v10.0.0 commands)
+Control KiCad programmatically from Rust with an async-first API and optional blocking wrappers.
+- **100% API coverage** (59/59 KiCad v10.0.1 commands)
 - **Type-safe PCB item manipulation** with ergonomic Rust models
 - **Both async and blocking APIs** for any application architecture
 - **Zero protobuf dependencies** for consumers — everything is typed Rust
 
 ## Status
 
-Beta. All KiCad v10.0.0 API commands are implemented and tested.
+Beta. All KiCad v10.0.1 API commands are implemented and covered by CI tests.
 
-- Async API (default): production-ready with full feature parity
-- Sync/blocking wrapper API (`feature = "blocking"`): production-ready, uses dedicated Tokio runtime thread
+- Async API (default): primary supported surface
+- Sync/blocking wrapper API (`feature = "blocking"`): wraps async calls on a dedicated Tokio runtime thread
+
+## Breaking Changes (Unreleased)
+
+The current unreleased branch includes API behavior changes that are **breaking for 0.4.x users** (pre-1.0 semver: breaking changes are released in a new **minor** version).
+
+Migration notes:
+
+- `TitleBlockInfo.comments` now preserves fixed `comment1..comment9` slot ordering and internal empty gaps when round-tripping through `set_title_block_info` / `get_title_block_info`.
+- `get_items_by_net` now documents KiCad 10.0.1 behavior explicitly: net **names** are authoritative; numeric net codes are legacy compatibility fields.
+
 ## Prerequisites
-
 - **Rust 1.70+** (edition 2021)
-- **KiCad 10.0.0+** running with the IPC API enabled
+- **KiCad 10.0.1+** running with the IPC API enabled
 - The `nng` transport library is bundled automatically via [nng-rs](https://crates.io/crates/nng)
 
 ### Enabling the KiCad IPC API
-
 1. Open KiCad → **Preferences** → **Plugins**
 2. Check **Enable IPC API**  
 3. Restart KiCad
@@ -168,26 +175,25 @@ cargo run --example selection_deep_dump --features blocking
 ```
 
 See the [examples/](examples/) directory for full source.
+
 ## KiCad Version Compatibility
 
-This crate tracks KiCad releases. When KiCad updates their API, we update within a week. Currently supports KiCad 10.0.0.
+This crate currently targets KiCad 10.0.1 IPC bindings. New KiCad versions are adopted as maintainers regenerate protos and validate wrapper behavior.
 
-## KiCad v10.0.0 API Reference
+## KiCad v10.0.1 API Reference
 
-All 57 KiCad v10.0.0 API commands are implemented:
+All 59 KiCad v10.0.1 API commands are implemented:
 
 ### Section Coverage
-
 | Section | Commands | Coverage |
 | --- | ---: | ---: |
 | Common (base) | 6 | 100% |
-| Common editor/document | 23 | 100% |
+| Common editor/document | 24 | 100% |
 | Project manager | 5 | 100% |
-| Board editor (PCB) | 23 | 100% |
-| **Total** | **57** | **100%** |
+| Board editor (PCB) | 24 | 100% |
+| **Total** | **59** | **100%** |
 
 ### Command Reference
-
 **Common (base)**
 
 | KiCad Command | Rust API |
@@ -219,13 +225,12 @@ All 57 KiCad v10.0.0 API commands are implemented:
 | `GetSelection` | `KiCadClient::get_selection`, `get_selection_summary`, `get_selection_details` |
 | `AddToSelection` / `RemoveFromSelection` / `ClearSelection` | `KiCadClient::add_to_selection`, `remove_from_selection`, `clear_selection` |
 | `HitTest` | `KiCadClient::hit_test_item` |
-| `GetTitleBlockInfo` | `KiCadClient::get_title_block_info` |
+| `GetTitleBlockInfo` / `SetTitleBlockInfo` | `KiCadClient::get_title_block_info`, `set_title_block_info` |
 | `SaveDocumentToString` | `KiCadClient::get_board_as_string` |
 | `SaveSelectionToString` | `KiCadClient::get_selection_as_string` |
 | `ParseAndCreateItemsFromString` | `KiCadClient::parse_and_create_items_from_string` |
 
 **Project manager**
-
 | KiCad Command | Rust API |
 | --- | --- |
 | `GetNetClasses` / `SetNetClasses` | `KiCadClient::get_net_classes`, `set_net_classes` |
@@ -242,6 +247,7 @@ All 57 KiCad v10.0.0 API commands are implemented:
 | `GetBoardOrigin` / `SetBoardOrigin` | `KiCadClient::get_board_origin`, `set_board_origin` |
 | `GetNets` | `KiCadClient::get_nets` |
 | `GetItemsByNet` / `GetItemsByNetClass` | `KiCadClient::get_items_by_net`, `get_items_by_net_class` |
+| `GetConnectedItems` | `KiCadClient::get_connected_items` |
 | `GetNetClassForNets` | `KiCadClient::get_netclass_for_nets` |
 | `RefillZones` | `KiCadClient::refill_zones` |
 | `GetPadShapeAsPolygon` | `KiCadClient::get_pad_shape_as_polygon` |
@@ -253,8 +259,9 @@ All 57 KiCad v10.0.0 API commands are implemented:
 | `GetBoardEditorAppearanceSettings` / `SetBoardEditorAppearanceSettings` | `KiCadClient::get_board_editor_appearance_settings`, `set_board_editor_appearance_settings` |
 | `InteractiveMoveItems` | `KiCadClient::interactive_move_items` |
 
-## Documentation
+> `GetItemsByNet` guidance (KiCad 10.0.1): net names are authoritative; net codes are legacy compatibility fields.
 
+## Documentation
 - **Guide**: [https://milind220.github.io/kicad-ipc-rs/](https://milind220.github.io/kicad-ipc-rs/)
 - **API Reference**: [docs.rs/kicad-ipc-rs](https://docs.rs/kicad-ipc-rs)
 
@@ -264,8 +271,7 @@ This crate ships checked-in Rust protobuf output under `src/proto/generated/`.
 
 - Consumers do **not** need KiCad source checkout or git submodules
 - Maintainers regenerate bindings from KiCad upstream via the `kicad` git submodule
-- Current proto pin: KiCad `10.0.0` (`KICAD_API_VERSION = 10.0.0-0-g0feeca2a`)
-
+- Current proto pin: KiCad `10.0.1` (`KICAD_API_VERSION = 10.0.1-0-g2db9e5a72b`)
 Maintainer refresh flow:
 
 ```bash

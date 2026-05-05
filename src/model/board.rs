@@ -3,9 +3,9 @@ use std::str::FromStr;
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// KiCad net descriptor.
 pub struct BoardNet {
-    /// Numeric net code.
+    /// Numeric net code (legacy identifier in KiCad 10.0.1+ APIs).
     pub code: i32,
-    /// Net name.
+    /// Net name (authoritative identifier for KiCad 10.0.1+ net queries).
     pub name: String,
 }
 
@@ -671,6 +671,55 @@ pub struct PcbDimension {
     pub keep_text_aligned: bool,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct PcbReferenceImage {
+    pub id: Option<String>,
+    pub layer: BoardLayerInfo,
+    pub position_nm: Option<Vector2Nm>,
+    pub transform_origin_offset_nm: Option<Vector2Nm>,
+    pub image_scale: Option<f64>,
+    pub image_data_len: usize,
+    pub locked: ItemLockState,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PcbBarcodeKind {
+    Unknown,
+    Code39,
+    Code128,
+    DataMatrix,
+    QrCode,
+    MicroQrCode,
+    Unrecognized(i32),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PcbBarcodeErrorCorrection {
+    Unknown,
+    L,
+    M,
+    Q,
+    H,
+    Unrecognized(i32),
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct PcbBarcode {
+    pub id: Option<String>,
+    pub text: String,
+    pub kind: PcbBarcodeKind,
+    pub error_correction: PcbBarcodeErrorCorrection,
+    pub position_nm: Option<Vector2Nm>,
+    pub orientation_deg: Option<f64>,
+    pub layer: BoardLayerInfo,
+    pub width_nm: Option<i64>,
+    pub height_nm: Option<i64>,
+    pub show_text: bool,
+    pub text_height_nm: Option<i64>,
+    pub knockout: bool,
+    pub knockout_margin_nm: Option<Vector2Nm>,
+    pub locked: ItemLockState,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PcbGroup {
     pub id: Option<String>,
@@ -698,10 +747,11 @@ pub enum PcbItem {
     Field(PcbField),
     Zone(PcbZone),
     Dimension(PcbDimension),
+    ReferenceImage(PcbReferenceImage),
+    Barcode(PcbBarcode),
     Group(PcbGroup),
     Unknown(PcbUnknownItem),
 }
-
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;

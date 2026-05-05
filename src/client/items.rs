@@ -5,11 +5,11 @@ use super::format::*;
 use super::mappers::*;
 use super::{
     KiCadClient, CMD_BEGIN_COMMIT, CMD_CREATE_ITEMS, CMD_DELETE_ITEMS, CMD_END_COMMIT,
-    CMD_GET_ITEMS_BY_NET, CMD_GET_ITEMS_BY_NET_CLASS, CMD_GET_NETCLASS_FOR_NETS,
-    CMD_PARSE_AND_CREATE_ITEMS_FROM_STRING, CMD_UPDATE_ITEMS, PCB_OBJECT_TYPES,
-    RES_BEGIN_COMMIT_RESPONSE, RES_CREATE_ITEMS_RESPONSE, RES_DELETE_ITEMS_RESPONSE,
-    RES_END_COMMIT_RESPONSE, RES_GET_ITEMS_RESPONSE, RES_NETCLASS_FOR_NETS_RESPONSE,
-    RES_UPDATE_ITEMS_RESPONSE,
+    CMD_GET_CONNECTED_ITEMS, CMD_GET_ITEMS_BY_NET, CMD_GET_ITEMS_BY_NET_CLASS,
+    CMD_GET_NETCLASS_FOR_NETS, CMD_PARSE_AND_CREATE_ITEMS_FROM_STRING, CMD_UPDATE_ITEMS,
+    PCB_OBJECT_TYPES, RES_BEGIN_COMMIT_RESPONSE, RES_CREATE_ITEMS_RESPONSE,
+    RES_DELETE_ITEMS_RESPONSE, RES_END_COMMIT_RESPONSE, RES_GET_ITEMS_RESPONSE,
+    RES_NETCLASS_FOR_NETS_RESPONSE, RES_UPDATE_ITEMS_RESPONSE,
 };
 use crate::envelope;
 use crate::error::KiCadError;
@@ -391,20 +391,21 @@ impl KiCadClient {
         Ok(rows)
     }
 
-    /// Fetches items filtered by net codes and returns raw protobuf payloads.
+    /// Fetches items filtered by nets and returns raw protobuf payloads.
+    ///
+    /// KiCad 10.0.1 treats net names as authoritative for this command. Net
+    /// codes are still sent for compatibility with legacy payloads, but names
+    /// should be considered the canonical identifiers.
     pub async fn get_items_by_net_raw(
         &self,
         type_codes: Vec<i32>,
-        net_codes: Vec<i32>,
+        nets: Vec<BoardNet>,
     ) -> Result<Vec<prost_types::Any>, KiCadError> {
-        let command = board_commands::GetItemsByNet {
-            header: Some(self.current_board_item_header().await?),
-            types: type_codes,
-            net_codes: net_codes
-                .into_iter()
-                .map(|value| board_types::NetCode { value })
-                .collect(),
-        };
+        let command = build_get_items_by_net_command(
+            self.current_board_item_header().await?,
+            type_codes,
+            nets,
+        );
 
         let response = self
             .send_command(envelope::pack_any(&command, CMD_GET_ITEMS_BY_NET))
@@ -415,16 +416,15 @@ impl KiCadClient {
         Ok(payload.items)
     }
 
-    /// Fetches items filtered by net codes and decodes typed items.
+    /// Fetches items filtered by nets and decodes typed items.
     pub async fn get_items_by_net(
         &self,
         type_codes: Vec<i32>,
-        net_codes: Vec<i32>,
+        nets: Vec<BoardNet>,
     ) -> Result<Vec<PcbItem>, KiCadError> {
-        let items = self.get_items_by_net_raw(type_codes, net_codes).await?;
+        let items = self.get_items_by_net_raw(type_codes, nets).await?;
         decode_pcb_items(items)
     }
-
     /// Fetches items filtered by net class names and returns raw payloads.
     pub async fn get_items_by_net_class_raw(
         &self,
@@ -455,6 +455,40 @@ impl KiCadClient {
         let items = self
             .get_items_by_net_class_raw(type_codes, net_classes)
             .await?;
+        decode_pcb_items(items)
+    }
+
+    /// Fetches copper-connected items from one or more source item ids and returns raw payloads.
+    pub async fn get_connected_items_raw(
+        &self,
+        item_ids: Vec<String>,
+        type_codes: Vec<i32>,
+    ) -> Result<Vec<prost_types::Any>, KiCadError> {
+        if item_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let command = build_get_connected_items_command(
+            self.current_board_item_header().await?,
+            item_ids,
+            type_codes,
+        );
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_GET_CONNECTED_ITEMS))
+            .await?;
+        let payload: common_commands::GetItemsResponse =
+            envelope::unpack_any(&response, RES_GET_ITEMS_RESPONSE)?;
+        ensure_item_request_ok(payload.status)?;
+        Ok(payload.items)
+    }
+
+    /// Fetches copper-connected items from one or more source item ids.
+    pub async fn get_connected_items(
+        &self,
+        item_ids: Vec<String>,
+        type_codes: Vec<i32>,
+    ) -> Result<Vec<PcbItem>, KiCadError> {
+        let items = self.get_connected_items_raw(item_ids, type_codes).await?;
         decode_pcb_items(items)
     }
 
@@ -489,5 +523,102 @@ impl KiCadClient {
         let response: board_commands::NetClassForNetsResponse =
             decode_any(&payload, RES_NETCLASS_FOR_NETS_RESPONSE)?;
         Ok(map_netclass_for_nets_response(response))
+    }
+}
+
+fn board_nets_to_proto(nets: Vec<BoardNet>) -> Vec<board_types::Net> {
+    nets.into_iter()
+        .map(|net| board_types::Net {
+            code: Some(board_types::NetCode { value: net.code }),
+            name: net.name,
+        })
+        .collect()
+}
+
+fn build_get_items_by_net_command(
+    header: common_types::ItemHeader,
+    type_codes: Vec<i32>,
+    nets: Vec<BoardNet>,
+) -> board_commands::GetItemsByNet {
+    board_commands::GetItemsByNet {
+        header: Some(header),
+        types: type_codes,
+        nets: board_nets_to_proto(nets),
+    }
+}
+
+fn build_get_connected_items_command(
+    header: common_types::ItemHeader,
+    item_ids: Vec<String>,
+    type_codes: Vec<i32>,
+) -> board_commands::GetConnectedItems {
+    board_commands::GetConnectedItems {
+        header: Some(header),
+        items: item_ids
+            .into_iter()
+            .map(|value| common_types::Kiid { value })
+            .collect(),
+        types: type_codes,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_get_connected_items_command, build_get_items_by_net_command};
+    use crate::model::board::BoardNet;
+    use crate::proto::kiapi::common::types as common_types;
+
+    fn sample_header() -> common_types::ItemHeader {
+        common_types::ItemHeader {
+            document: Some(common_types::DocumentSpecifier::default()),
+            container: None,
+            field_mask: None,
+        }
+    }
+
+    #[test]
+    fn get_items_by_net_command_maps_names_and_codes() {
+        let command = build_get_items_by_net_command(
+            sample_header(),
+            vec![11, 12],
+            vec![
+                BoardNet {
+                    code: 41,
+                    name: "Net-(U1-Pad1)".to_string(),
+                },
+                BoardNet {
+                    code: 0,
+                    name: "GND".to_string(),
+                },
+            ],
+        );
+
+        assert_eq!(command.types, vec![11, 12]);
+        assert_eq!(command.nets.len(), 2);
+        assert_eq!(command.nets[0].name, "Net-(U1-Pad1)");
+        assert_eq!(
+            command.nets[0].code.as_ref().map(|code| code.value),
+            Some(41)
+        );
+        assert_eq!(command.nets[1].name, "GND");
+        assert_eq!(
+            command.nets[1].code.as_ref().map(|code| code.value),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn get_connected_items_command_maps_item_ids_and_types() {
+        let command = build_get_connected_items_command(
+            sample_header(),
+            vec!["uuid-1".to_string(), "uuid-2".to_string()],
+            vec![11, 12],
+        );
+
+        assert_eq!(command.types, vec![11, 12]);
+        assert_eq!(command.items.len(), 2);
+        assert_eq!(command.items[0].value, "uuid-1");
+        assert_eq!(command.items[1].value, "uuid-2");
+        assert!(command.header.is_some());
     }
 }
