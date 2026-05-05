@@ -1,6 +1,6 @@
 # Introduction
 
-`kicad-ipc-rs` is a production-ready Rust client for KiCad's IPC API.
+`kicad-ipc-rs` is a Rust client for KiCad's IPC API.
 
 ## Why this crate?
 
@@ -12,7 +12,7 @@
 - **Type-Safe Models**: Native Rust structs for tracks, vias, footprints, nets, and more
 - **Dual API**: Async-first design with full synchronous support via `blocking` feature
 - **Zero Protobuf Hassle**: Pre-generated types — no KiCad source checkout needed
-- **Battle-Tested**: Used in real automation and integration workflows
+- **Field-Used**: Applied in automation and integration workflows
 
 ### API Comparison
 | Capability | `kicad-ipc-rs` | Python bindings | Official Rust |
@@ -33,7 +33,7 @@
 
 - KiCad API proto snapshot pinned in repo (`src/proto/generated/`)
 - 59/59 wrapped command families from KiCad v10.0.1
-- Runtime compatibility verified against KiCad 10.0.1
+- Runtime behavior validated in CI and manual checks against KiCad 10.0.1
 
 ## Core Entrypoints
 - **Async**: `kicad_ipc_rs::KiCadClient`

@@ -3,9 +3,9 @@ use std::str::FromStr;
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// KiCad net descriptor.
 pub struct BoardNet {
-    /// Numeric net code.
+    /// Numeric net code (legacy identifier in KiCad 10.0.1+ APIs).
     pub code: i32,
-    /// Net name.
+    /// Net name (authoritative identifier for KiCad 10.0.1+ net queries).
     pub name: String,
 }
 

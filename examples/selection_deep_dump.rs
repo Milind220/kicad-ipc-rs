@@ -505,18 +505,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         name_to_code.insert(net.name, net.code);
     }
 
-    let mut selected_nets = Vec::new();
-    for name in &selected_net_names {
-        if let Some(code) = name_to_code.get(name) {
-            selected_nets.push(BoardNet {
-                code: *code,
-                name: name.clone(),
-            });
-        }
+    let mut selected_nets: Vec<BoardNet> = selected_net_names
+        .iter()
+        .map(|name| BoardNet {
+            code: *name_to_code.get(name).unwrap_or(&0),
+            name: name.clone(),
+        })
+        .collect();
+    selected_nets.sort_by(|left, right| left.name.cmp(&right.name));
+    selected_nets.dedup_by(|left, right| left.name == right.name);
+
+    let selected_nets_missing_code = selected_nets.iter().filter(|net| net.code == 0).count();
+    if selected_nets_missing_code > 0 {
+        println!(
+            "selected_nets_missing_legacy_codes={} (name-based queries still used)",
+            selected_nets_missing_code
+        );
     }
-    selected_nets.sort_by_key(|net| net.code);
-    selected_nets.dedup_by_key(|net| net.code);
-    println!("selected_nets={:?}", selected_nets);
+    println!("selected_nets(name-deduped)={:?}", selected_nets);
+
     let route_type_codes: Vec<i32> = [
         "KOT_PCB_TRACE",
         "KOT_PCB_VIA",
@@ -636,7 +643,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     } else {
-        println!("connected_items_on_selected_nets unavailable: no resolvable net codes");
+        println!("connected_items_on_selected_nets unavailable: no selected net names");
     }
 
     Ok(())

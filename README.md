@@ -2,8 +2,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Milind220/kicad-ipc-rust)
 
-Control KiCad programmatically from Rust. The most complete, production-ready client for KiCad's IPC API — async-first with full sync support.
-
+Control KiCad programmatically from Rust with an async-first API and optional blocking wrappers.
 - **100% API coverage** (59/59 KiCad v10.0.1 commands)
 - **Type-safe PCB item manipulation** with ergonomic Rust models
 - **Both async and blocking APIs** for any application architecture
@@ -11,13 +10,21 @@ Control KiCad programmatically from Rust. The most complete, production-ready cl
 
 ## Status
 
-Beta. All KiCad v10.0.1 API commands are implemented and tested.
+Beta. All KiCad v10.0.1 API commands are implemented and covered by CI tests.
 
-- Async API (default): production-ready with full feature parity
-- Sync/blocking wrapper API (`feature = "blocking"`): production-ready, uses dedicated Tokio runtime thread
+- Async API (default): primary supported surface
+- Sync/blocking wrapper API (`feature = "blocking"`): wraps async calls on a dedicated Tokio runtime thread
+
+## Breaking Changes (Unreleased)
+
+The current unreleased branch includes API behavior changes that are **breaking for 0.4.x users** (pre-1.0 semver: breaking changes are released in a new **minor** version).
+
+Migration notes:
+
+- `TitleBlockInfo.comments` now preserves fixed `comment1..comment9` slot ordering and internal empty gaps when round-tripping through `set_title_block_info` / `get_title_block_info`.
+- `get_items_by_net` now documents KiCad 10.0.1 behavior explicitly: net **names** are authoritative; numeric net codes are legacy compatibility fields.
 
 ## Prerequisites
-
 - **Rust 1.70+** (edition 2021)
 - **KiCad 10.0.1+** running with the IPC API enabled
 - The `nng` transport library is bundled automatically via [nng-rs](https://crates.io/crates/nng)
@@ -170,7 +177,8 @@ cargo run --example selection_deep_dump --features blocking
 See the [examples/](examples/) directory for full source.
 
 ## KiCad Version Compatibility
-This crate tracks KiCad releases. When KiCad updates their API, we update within a week. Currently supports KiCad 10.0.1.
+
+This crate currently targets KiCad 10.0.1 IPC bindings. New KiCad versions are adopted as maintainers regenerate protos and validate wrapper behavior.
 
 ## KiCad v10.0.1 API Reference
 
@@ -250,6 +258,8 @@ All 59 KiCad v10.0.1 API commands are implemented:
 | `GetBoardLayerName` | `KiCadClient::get_board_layer_name` |
 | `GetBoardEditorAppearanceSettings` / `SetBoardEditorAppearanceSettings` | `KiCadClient::get_board_editor_appearance_settings`, `set_board_editor_appearance_settings` |
 | `InteractiveMoveItems` | `KiCadClient::interactive_move_items` |
+
+> `GetItemsByNet` guidance (KiCad 10.0.1): net names are authoritative; net codes are legacy compatibility fields.
 
 ## Documentation
 - **Guide**: [https://milind220.github.io/kicad-ipc-rs/](https://milind220.github.io/kicad-ipc-rs/)

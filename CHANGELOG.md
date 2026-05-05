@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- `TitleBlockInfo.comments` now preserves fixed `comment1..comment9` slot ordering, including internal empty gaps, when round-tripping through `get_title_block_info` and `set_title_block_info`.
+- Clarified `get_items_by_net` behavior for KiCad 10.0.1: net names are authoritative; net codes are legacy compatibility fields.
+
+### Migration Guidance
+
+- If your code assumed `TitleBlockInfo.comments` dropped all empty strings, update it to handle internal empty entries while still expecting trailing empty slots to be trimmed.
+- If you deduplicated/query-filtered nets by numeric code, migrate to net-name-first logic.
+- Semver note (pre-1.0): this breaking behavior belongs in the next **minor** release, not a patch release.
+
 ### Changed
 
 - update KiCad support to 10.0.1 and align API wrappers with regenerated bindings (GetItemsByNet nets input, GetConnectedItems, SetTitleBlockInfo)
 - add typed read/editable model coverage for `ReferenceImage` and `Barcode`
 - refresh docs and examples for KiCad 10.0.1 command coverage and proto pin
+
 ## [0.4.4](https://github.com/Milind220/kicad-ipc-rs/compare/v0.4.3...v0.4.4) - 2026-04-25
 
 ### Added

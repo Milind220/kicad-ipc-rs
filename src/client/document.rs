@@ -18,6 +18,10 @@ use crate::proto::kiapi::common::commands as common_commands;
 use crate::proto::kiapi::common::types as common_types;
 impl KiCadClient {
     /// Reads title block metadata from the active PCB document.
+    ///
+    /// `TitleBlockInfo::comments` preserves fixed `comment1..comment9` slot
+    /// ordering, including internal empty gaps, and trims only trailing empty
+    /// slots from the returned vector.
     pub async fn get_title_block_info(&self) -> Result<TitleBlockInfo, KiCadError> {
         let command = common_commands::GetTitleBlockInfo {
             document: Some(self.current_board_document_proto().await?),
@@ -49,6 +53,10 @@ impl KiCadClient {
     }
 
     /// Sets title block metadata on the active PCB document.
+    ///
+    /// `TitleBlockInfo::comments` is interpreted as fixed `comment1..comment9`
+    /// slots in order. Internal empty slots are preserved; values beyond slot 9
+    /// are ignored.
     pub async fn set_title_block_info(
         &self,
         title_block: TitleBlockInfo,
@@ -213,7 +221,7 @@ impl KiCadClient {
 }
 
 fn title_block_info_from_proto(payload: common_types::TitleBlockInfo) -> TitleBlockInfo {
-    let comments = vec![
+    let mut comments = vec![
         payload.comment1,
         payload.comment2,
         payload.comment3,
@@ -223,10 +231,11 @@ fn title_block_info_from_proto(payload: common_types::TitleBlockInfo) -> TitleBl
         payload.comment7,
         payload.comment8,
         payload.comment9,
-    ]
-    .into_iter()
-    .filter(|comment| !comment.is_empty())
-    .collect();
+    ];
+
+    while comments.last().is_some_and(|comment| comment.is_empty()) {
+        comments.pop();
+    }
 
     TitleBlockInfo {
         title: payload.title,
@@ -236,7 +245,6 @@ fn title_block_info_from_proto(payload: common_types::TitleBlockInfo) -> TitleBl
         comments,
     }
 }
-
 fn title_block_info_to_proto(title_block: TitleBlockInfo) -> common_types::TitleBlockInfo {
     let mut comments = title_block.comments;
     comments.truncate(9);
@@ -255,5 +263,66 @@ fn title_block_info_to_proto(title_block: TitleBlockInfo) -> common_types::Title
         comment7: comments.get(6).cloned().unwrap_or_default(),
         comment8: comments.get(7).cloned().unwrap_or_default(),
         comment9: comments.get(8).cloned().unwrap_or_default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{title_block_info_from_proto, title_block_info_to_proto};
+    use crate::model::common::TitleBlockInfo;
+    use crate::proto::kiapi::common::types as common_types;
+
+    #[test]
+    fn title_block_preserves_internal_comment_gaps() {
+        let title_block = TitleBlockInfo {
+            title: "Demo".to_string(),
+            date: "2026-04-26".to_string(),
+            revision: "A".to_string(),
+            company: "Acme".to_string(),
+            comments: vec!["first".to_string(), "".to_string(), "third".to_string()],
+        };
+
+        let proto = title_block_info_to_proto(title_block.clone());
+        assert_eq!(proto.comment1, "first");
+        assert_eq!(proto.comment2, "");
+        assert_eq!(proto.comment3, "third");
+
+        let mapped = title_block_info_from_proto(proto);
+        assert_eq!(mapped, title_block);
+    }
+
+    #[test]
+    fn title_block_trims_trailing_empty_comment_slots_from_public_vec() {
+        let proto = common_types::TitleBlockInfo {
+            comment1: "c1".to_string(),
+            comment2: "".to_string(),
+            comment3: "c3".to_string(),
+            comment4: "".to_string(),
+            comment5: "".to_string(),
+            comment6: "".to_string(),
+            comment7: "".to_string(),
+            comment8: "".to_string(),
+            comment9: "".to_string(),
+            ..common_types::TitleBlockInfo::default()
+        };
+
+        let mapped = title_block_info_from_proto(proto);
+        assert_eq!(mapped.comments, vec!["c1", "", "c3"]);
+    }
+
+    #[test]
+    fn title_block_to_proto_truncates_to_nine_comment_slots() {
+        let title_block = TitleBlockInfo {
+            title: String::new(),
+            date: String::new(),
+            revision: String::new(),
+            company: String::new(),
+            comments: (1..=11).map(|idx| format!("c{idx}")).collect(),
+        };
+
+        let proto = title_block_info_to_proto(title_block);
+        assert_eq!(proto.comment1, "c1");
+        assert_eq!(proto.comment8, "c8");
+        assert_eq!(proto.comment9, "c9");
     }
 }
