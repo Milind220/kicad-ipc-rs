@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- update KiCad support to 10.0.1 and align API wrappers with regenerated bindings (GetItemsByNet nets input, GetConnectedItems, SetTitleBlockInfo)
+- add typed read/editable model coverage for `ReferenceImage` and `Barcode`
+- refresh docs and examples for KiCad 10.0.1 command coverage and proto pin
 ## [0.4.4](https://github.com/Milind220/kicad-ipc-rs/compare/v0.4.3...v0.4.4) - 2026-04-25
 
 ### Added
