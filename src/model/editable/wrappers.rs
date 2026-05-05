@@ -57,7 +57,7 @@ impl_proto_wrapper!(ZoneItem, board_types::Zone);
 impl_proto_wrapper!(DimensionItem, board_types::Dimension);
 impl_proto_wrapper!(GroupItem, board_types::Group);
 impl_proto_wrapper!(ReferenceImageItem, board_types::ReferenceImage);
-
+impl_proto_wrapper!(BarcodeItem, board_types::Barcode);
 impl TrackItem {
     /// Returns the track KIID value.
     pub fn id(&self) -> Option<&str> {
@@ -343,5 +343,39 @@ impl GroupItem {
             .into_iter()
             .map(|value| common_types::Kiid { value })
             .collect();
+    }
+}
+
+impl ReferenceImageItem {
+    /// Returns the reference image KIID value.
+    pub fn id(&self) -> Option<&str> {
+        kiid_value(&self.proto.id)
+    }
+
+    /// Returns the reference image layer id.
+    pub fn layer_id(&self) -> i32 {
+        self.proto.layer
+    }
+
+    /// Sets the reference image layer id.
+    pub fn set_layer_id(&mut self, layer_id: i32) {
+        self.proto.layer = layer_id;
+    }
+}
+
+impl BarcodeItem {
+    /// Returns the barcode KIID value.
+    pub fn id(&self) -> Option<&str> {
+        kiid_value(&self.proto.id)
+    }
+
+    /// Returns the barcode layer id.
+    pub fn layer_id(&self) -> i32 {
+        self.proto.layer
+    }
+
+    /// Sets the barcode layer id.
+    pub fn set_layer_id(&mut self, layer_id: i32) {
+        self.proto.layer = layer_id;
     }
 }

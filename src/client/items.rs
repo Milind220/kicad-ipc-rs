@@ -5,11 +5,11 @@ use super::format::*;
 use super::mappers::*;
 use super::{
     KiCadClient, CMD_BEGIN_COMMIT, CMD_CREATE_ITEMS, CMD_DELETE_ITEMS, CMD_END_COMMIT,
-    CMD_GET_ITEMS_BY_NET, CMD_GET_ITEMS_BY_NET_CLASS, CMD_GET_NETCLASS_FOR_NETS,
-    CMD_PARSE_AND_CREATE_ITEMS_FROM_STRING, CMD_UPDATE_ITEMS, PCB_OBJECT_TYPES,
-    RES_BEGIN_COMMIT_RESPONSE, RES_CREATE_ITEMS_RESPONSE, RES_DELETE_ITEMS_RESPONSE,
-    RES_END_COMMIT_RESPONSE, RES_GET_ITEMS_RESPONSE, RES_NETCLASS_FOR_NETS_RESPONSE,
-    RES_UPDATE_ITEMS_RESPONSE,
+    CMD_GET_CONNECTED_ITEMS, CMD_GET_ITEMS_BY_NET, CMD_GET_ITEMS_BY_NET_CLASS,
+    CMD_GET_NETCLASS_FOR_NETS, CMD_PARSE_AND_CREATE_ITEMS_FROM_STRING, CMD_UPDATE_ITEMS,
+    PCB_OBJECT_TYPES, RES_BEGIN_COMMIT_RESPONSE, RES_CREATE_ITEMS_RESPONSE,
+    RES_DELETE_ITEMS_RESPONSE, RES_END_COMMIT_RESPONSE, RES_GET_ITEMS_RESPONSE,
+    RES_NETCLASS_FOR_NETS_RESPONSE, RES_UPDATE_ITEMS_RESPONSE,
 };
 use crate::envelope;
 use crate::error::KiCadError;
@@ -391,21 +391,23 @@ impl KiCadClient {
         Ok(rows)
     }
 
-    /// Fetches items filtered by net codes and returns raw protobuf payloads.
+    /// Fetches items filtered by nets and returns raw protobuf payloads.
     pub async fn get_items_by_net_raw(
         &self,
         type_codes: Vec<i32>,
-        net_codes: Vec<i32>,
+        nets: Vec<BoardNet>,
     ) -> Result<Vec<prost_types::Any>, KiCadError> {
         let command = board_commands::GetItemsByNet {
             header: Some(self.current_board_item_header().await?),
             types: type_codes,
-            net_codes: net_codes
+            nets: nets
                 .into_iter()
-                .map(|value| board_types::NetCode { value })
+                .map(|net| board_types::Net {
+                    code: Some(board_types::NetCode { value: net.code }),
+                    name: net.name,
+                })
                 .collect(),
         };
-
         let response = self
             .send_command(envelope::pack_any(&command, CMD_GET_ITEMS_BY_NET))
             .await?;
@@ -415,16 +417,15 @@ impl KiCadClient {
         Ok(payload.items)
     }
 
-    /// Fetches items filtered by net codes and decodes typed items.
+    /// Fetches items filtered by nets and decodes typed items.
     pub async fn get_items_by_net(
         &self,
         type_codes: Vec<i32>,
-        net_codes: Vec<i32>,
+        nets: Vec<BoardNet>,
     ) -> Result<Vec<PcbItem>, KiCadError> {
-        let items = self.get_items_by_net_raw(type_codes, net_codes).await?;
+        let items = self.get_items_by_net_raw(type_codes, nets).await?;
         decode_pcb_items(items)
     }
-
     /// Fetches items filtered by net class names and returns raw payloads.
     pub async fn get_items_by_net_class_raw(
         &self,
@@ -455,6 +456,44 @@ impl KiCadClient {
         let items = self
             .get_items_by_net_class_raw(type_codes, net_classes)
             .await?;
+        decode_pcb_items(items)
+    }
+
+    /// Fetches copper-connected items from one or more source item ids and returns raw payloads.
+    pub async fn get_connected_items_raw(
+        &self,
+        item_ids: Vec<String>,
+        type_codes: Vec<i32>,
+    ) -> Result<Vec<prost_types::Any>, KiCadError> {
+        if item_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let command = board_commands::GetConnectedItems {
+            header: Some(self.current_board_item_header().await?),
+            items: item_ids
+                .into_iter()
+                .map(|value| common_types::Kiid { value })
+                .collect(),
+            types: type_codes,
+        };
+
+        let response = self
+            .send_command(envelope::pack_any(&command, CMD_GET_CONNECTED_ITEMS))
+            .await?;
+        let payload: common_commands::GetItemsResponse =
+            envelope::unpack_any(&response, RES_GET_ITEMS_RESPONSE)?;
+        ensure_item_request_ok(payload.status)?;
+        Ok(payload.items)
+    }
+
+    /// Fetches copper-connected items from one or more source item ids.
+    pub async fn get_connected_items(
+        &self,
+        item_ids: Vec<String>,
+        type_codes: Vec<i32>,
+    ) -> Result<Vec<PcbItem>, KiCadError> {
+        let items = self.get_connected_items_raw(item_ids, type_codes).await?;
         decode_pcb_items(items)
     }
 

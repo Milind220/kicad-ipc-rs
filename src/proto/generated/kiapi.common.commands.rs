@@ -388,6 +388,13 @@ pub struct GetTitleBlockInfo {
     pub document: ::core::option::Option<super::types::DocumentSpecifier>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SetTitleBlockInfo {
+    #[prost(message, optional, tag = "1")]
+    pub document: ::core::option::Option<super::types::DocumentSpecifier>,
+    #[prost(message, optional, tag = "2")]
+    pub title_block: ::core::option::Option<super::types::TitleBlockInfo>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SaveDocumentToString {
     #[prost(message, optional, tag = "1")]
     pub document: ::core::option::Option<super::types::DocumentSpecifier>,
