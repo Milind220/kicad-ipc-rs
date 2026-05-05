@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/Milind220/kicad-ipc-rs/compare/v0.4.4...v0.5.0) - 2026-05-05
+
+### Added
+
+- [**breaking**] update IPC bindings for KiCad 10.0.1 ([#34](https://github.com/Milind220/kicad-ipc-rs/pull/34))
+
 ### Breaking Changes
 
 - `TitleBlockInfo.comments` now preserves fixed `comment1..comment9` slot ordering, including internal empty gaps, when round-tripping through `get_title_block_info` and `set_title_block_info`.
