@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-e7da7fc2.js";
+            window.path_to_searchindex_js = "searchindex-5f582276.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -179,16 +179,16 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p><code>kicad-ipc-rs</code> is a production-ready Rust client for KiCad’s IPC API.</p>
+<p><code>kicad-ipc-rs</code> is a Rust client for KiCad’s IPC API.</p>
 <h2 id="why-this-crate"><a class="header" href="#why-this-crate">Why this crate?</a></h2>
 <p><code>kicad-ipc-rs</code> gives you programmatic control over KiCad with an ergonomic, type-safe Rust API. Whether you’re building automation tools, integrating KiCad into CI/CD pipelines, or creating custom workflows, this crate provides the most complete and well-documented interface to KiCad’s API.</p>
 <h3 id="key-features"><a class="header" href="#key-features">Key Features</a></h3>
 <ul>
-<li><strong>100% API Coverage</strong>: All 57 KiCad v10.0.0 API commands implemented</li>
+<li><strong>100% API Coverage</strong>: All 59 KiCad v10.0.1 API commands implemented</li>
 <li><strong>Type-Safe Models</strong>: Native Rust structs for tracks, vias, footprints, nets, and more</li>
 <li><strong>Dual API</strong>: Async-first design with full synchronous support via <code>blocking</code> feature</li>
 <li><strong>Zero Protobuf Hassle</strong>: Pre-generated types — no KiCad source checkout needed</li>
-<li><strong>Battle-Tested</strong>: Used in real automation and integration workflows</li>
+<li><strong>Field-Used</strong>: Applied in automation and integration workflows</li>
 </ul>
 <h3 id="api-comparison"><a class="header" href="#api-comparison">API Comparison</a></h3>
 <div class="table-wrapper">
@@ -199,7 +199,7 @@
 <tbody>
 <tr><td>Rust-native API</td><td>✅ Production-ready</td><td>❌ Python only</td><td>⚠️ Preview</td></tr>
 <tr><td>Async + Sync</td><td>✅ Both supported</td><td>⚠️ Event-loop</td><td>⚠️ Preview</td></tr>
-<tr><td>Complete coverage</td><td>✅ 57/57 commands</td><td>Unknown</td><td>Unknown</td></tr>
+<tr><td>Complete coverage</td><td>✅ 59/59 commands</td><td>Unknown</td><td>Unknown</td></tr>
 <tr><td>Active maintenance</td><td>✅ Yes</td><td>✅ Official</td><td>⚠️ Preview</td></tr>
 </tbody>
 </table>
@@ -215,8 +215,8 @@
 <h2 id="current-scope"><a class="header" href="#current-scope">Current Scope</a></h2>
 <ul>
 <li>KiCad API proto snapshot pinned in repo (<code>src/proto/generated/</code>)</li>
-<li>57/57 wrapped command families from KiCad v10.0.0</li>
-<li>Runtime compatibility verified against KiCad 10.0.0</li>
+<li>59/59 wrapped command families from KiCad v10.0.1</li>
+<li>Runtime behavior validated in CI and manual checks against KiCad 10.0.1</li>
 </ul>
 <h2 id="core-entrypoints"><a class="header" href="#core-entrypoints">Core Entrypoints</a></h2>
 <ul>
@@ -315,6 +315,7 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 <li><code>get_items_by_net(...)</code> or <code>get_items_by_type_codes(...)</code></li>
 </ol>
 <p>Reason: fail fast on document state before expensive item traversal.</p>
+<p>KiCad 10.0.1 note: for <code>get_items_by_net(...)</code>, treat net names as authoritative and net codes as legacy compatibility fields.</p>
 <h2 id="pattern-safe-write-session"><a class="header" href="#pattern-safe-write-session">Pattern: Safe Write Session</a></h2>
 <p>Use begin/end commit around mutating commands.</p>
 <ol>
@@ -781,6 +782,16 @@ cargo test --features blocking
 <li><code>get_selection_*</code> methods now take <code>type_codes: Vec&lt;i32&gt;</code> (<code>Vec::new()</code> means no filter).</li>
 <li><code>add_to_selection</code>, <code>remove_from_selection</code>, <code>clear_selection</code> return <code>SelectionMutationResult</code> (decoded items + summary).</li>
 <li><code>get_selection_as_string</code> returns <code>SelectionStringDump</code> (<code>ids</code> + <code>contents</code>).</li>
+</ul>
+<p>Net query notes (KiCad 10.0.1):</p>
+<ul>
+<li><code>get_items_by_net(...)</code> treats net names as authoritative.</li>
+<li>Numeric net codes are carried for legacy compatibility but should not be used as the primary dedupe key.</li>
+</ul>
+<p>Breaking-change note (unreleased):</p>
+<ul>
+<li><code>TitleBlockInfo.comments</code> now preserves fixed <code>comment1..comment9</code> slot ordering (including internal empty slots) when round-tripping through <code>set_title_block_info</code> and <code>get_title_block_info</code>.</li>
+<li>For this pre-1.0 crate, expect this behavior change to land in a new <strong>minor</strong> release (not a patch release).</li>
 </ul>
 
                     </main>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-e7da7fc2.js";
+            window.path_to_searchindex_js = "searchindex-5f582276.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -178,16 +178,16 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p><code>kicad-ipc-rs</code> is a production-ready Rust client for KiCad’s IPC API.</p>
+<p><code>kicad-ipc-rs</code> is a Rust client for KiCad’s IPC API.</p>
 <h2 id="why-this-crate"><a class="header" href="#why-this-crate">Why this crate?</a></h2>
 <p><code>kicad-ipc-rs</code> gives you programmatic control over KiCad with an ergonomic, type-safe Rust API. Whether you’re building automation tools, integrating KiCad into CI/CD pipelines, or creating custom workflows, this crate provides the most complete and well-documented interface to KiCad’s API.</p>
 <h3 id="key-features"><a class="header" href="#key-features">Key Features</a></h3>
 <ul>
-<li><strong>100% API Coverage</strong>: All 57 KiCad v10.0.0 API commands implemented</li>
+<li><strong>100% API Coverage</strong>: All 59 KiCad v10.0.1 API commands implemented</li>
 <li><strong>Type-Safe Models</strong>: Native Rust structs for tracks, vias, footprints, nets, and more</li>
 <li><strong>Dual API</strong>: Async-first design with full synchronous support via <code>blocking</code> feature</li>
 <li><strong>Zero Protobuf Hassle</strong>: Pre-generated types — no KiCad source checkout needed</li>
-<li><strong>Battle-Tested</strong>: Used in real automation and integration workflows</li>
+<li><strong>Field-Used</strong>: Applied in automation and integration workflows</li>
 </ul>
 <h3 id="api-comparison"><a class="header" href="#api-comparison">API Comparison</a></h3>
 <div class="table-wrapper">
@@ -198,7 +198,7 @@
 <tbody>
 <tr><td>Rust-native API</td><td>✅ Production-ready</td><td>❌ Python only</td><td>⚠️ Preview</td></tr>
 <tr><td>Async + Sync</td><td>✅ Both supported</td><td>⚠️ Event-loop</td><td>⚠️ Preview</td></tr>
-<tr><td>Complete coverage</td><td>✅ 57/57 commands</td><td>Unknown</td><td>Unknown</td></tr>
+<tr><td>Complete coverage</td><td>✅ 59/59 commands</td><td>Unknown</td><td>Unknown</td></tr>
 <tr><td>Active maintenance</td><td>✅ Yes</td><td>✅ Official</td><td>⚠️ Preview</td></tr>
 </tbody>
 </table>
@@ -214,8 +214,8 @@
 <h2 id="current-scope"><a class="header" href="#current-scope">Current Scope</a></h2>
 <ul>
 <li>KiCad API proto snapshot pinned in repo (<code>src/proto/generated/</code>)</li>
-<li>57/57 wrapped command families from KiCad v10.0.0</li>
-<li>Runtime compatibility verified against KiCad 10.0.0</li>
+<li>59/59 wrapped command families from KiCad v10.0.1</li>
+<li>Runtime behavior validated in CI and manual checks against KiCad 10.0.1</li>
 </ul>
 <h2 id="core-entrypoints"><a class="header" href="#core-entrypoints">Core Entrypoints</a></h2>
 <ul>

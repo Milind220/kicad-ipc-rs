@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-e7da7fc2.js";
+            window.path_to_searchindex_js = "searchindex-5f582276.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-cba1521b.js"></script>
@@ -197,6 +197,7 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 <li><code>get_items_by_net(...)</code> or <code>get_items_by_type_codes(...)</code></li>
 </ol>
 <p>Reason: fail fast on document state before expensive item traversal.</p>
+<p>KiCad 10.0.1 note: for <code>get_items_by_net(...)</code>, treat net names as authoritative and net codes as legacy compatibility fields.</p>
 <h2 id="pattern-safe-write-session"><a class="header" href="#pattern-safe-write-session">Pattern: Safe Write Session</a></h2>
 <p>Use begin/end commit around mutating commands.</p>
 <ol>
