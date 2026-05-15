@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- start unstable KiCad 11 / 10.99 IPC groundwork with regenerated protos and raw command helpers
 - update KiCad support to 10.0.1 and align API wrappers with regenerated bindings (GetItemsByNet nets input, GetConnectedItems, SetTitleBlockInfo)
 - add typed read/editable model coverage for `ReferenceImage` and `Barcode`
 - refresh docs and examples for KiCad 10.0.1 command coverage and proto pin

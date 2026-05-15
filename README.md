@@ -3,17 +3,22 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Milind220/kicad-ipc-rust)
 
 Control KiCad programmatically from Rust with an async-first API and optional blocking wrappers.
-- **100% API coverage** (59/59 KiCad v10.0.1 commands)
+- **KiCad 11 groundwork branch** generated from KiCad `10.99.0-991-gd3bb3db575`
+- **Raw KiCad 11 command helpers** for new project, editor, board, schematic, and job command families
+- **KiCad 10 wrapper coverage preserved** while KiCad 11 typed wrappers are tracked separately
 - **Type-safe PCB item manipulation** with ergonomic Rust models
 - **Both async and blocking APIs** for any application architecture
-- **Zero protobuf dependencies** for consumers — everything is typed Rust
+- **Checked-in protobuf output** so consumers do not need a KiCad source checkout
 
 ## Status
 
-Beta. All KiCad v10.0.1 API commands are implemented and covered by CI tests.
+Unstable KiCad 11 / 10.99 support branch. The checked-in protos are generated from KiCad `origin/master` at `d3bb3db575303c86edd68d526258d6e5b9294bc9`, described as `10.99.0-991-gd3bb3db575`.
+
+Existing KiCad 10 typed wrappers remain in place, but new KiCad 11 APIs are exposed first through generated protobuf types plus raw command helpers. Do not treat this branch as stable KiCad 11 API support yet.
 
 - Async API (default): primary supported surface
 - Sync/blocking wrapper API (`feature = "blocking"`): wraps async calls on a dedicated Tokio runtime thread
+- Low-level proto/raw API: `kicad_ipc_rs::proto`, `kicad_ipc_rs::commands::*`, and `KiCadClient::send_raw_command`
 
 ## Breaking Changes (Unreleased)
 
@@ -26,7 +31,7 @@ Migration notes:
 
 ## Prerequisites
 - **Rust 1.70+** (edition 2021)
-- **KiCad 10.0.1+** running with the IPC API enabled
+- **KiCad 11 development / 10.99** running with the IPC API enabled, or headless `kicad-cli api-server`
 - The `nng` transport library is bundled automatically via [nng-rs](https://crates.io/crates/nng)
 
 ### Enabling the KiCad IPC API
@@ -178,11 +183,24 @@ See the [examples/](examples/) directory for full source.
 
 ## KiCad Version Compatibility
 
-This crate currently targets KiCad 10.0.1 IPC bindings. New KiCad versions are adopted as maintainers regenerate protos and validate wrapper behavior.
+This branch targets unstable KiCad 11 / 10.99 IPC bindings. The proto snapshot is `10.99.0-991-gd3bb3db575`; see `KICAD_API_VERSION`.
 
-## KiCad v10.0.1 API Reference
+KiCad 10 wrapper behavior is preserved where the KiCad 11 schema still supports it. New KiCad 11 command families are currently raw-first; typed wrappers are tracked in [docs/KICAD_11_IPC_PLAN.md](docs/KICAD_11_IPC_PLAN.md).
 
-All 59 KiCad v10.0.1 API commands are implemented:
+## KiCad 11 Raw IPC Surface
+
+The unstable branch exposes generated protobuf modules and command packers:
+
+- `kicad_ipc_rs::proto::kiapi::*`: checked-in prost output for the KiCad snapshot.
+- `kicad_ipc_rs::commands::project`: `OpenDocument`, `CloseDocument`, `SaveDocument`.
+- `kicad_ipc_rs::commands::editor`: page settings get/set.
+- `kicad_ipc_rs::commands::board`: board design rules and board export jobs.
+- `kicad_ipc_rs::commands::schematic`: hierarchy/netlist and schematic export jobs.
+- `KiCadClient::send_raw_command`: sends a pre-packed `prost_types::Any` command and returns the raw response payload.
+
+## KiCad v10.0.1 Wrapped API Reference
+
+The previously wrapped KiCad v10.0.1 command set remains available on this branch:
 
 ### Section Coverage
 | Section | Commands | Coverage |
@@ -271,7 +289,7 @@ This crate ships checked-in Rust protobuf output under `src/proto/generated/`.
 
 - Consumers do **not** need KiCad source checkout or git submodules
 - Maintainers regenerate bindings from KiCad upstream via the `kicad` git submodule
-- Current proto pin: KiCad `10.0.1` (`KICAD_API_VERSION = 10.0.1-0-g2db9e5a72b`)
+- Current proto pin: KiCad `10.99.0-991-gd3bb3db575` (`KICAD_API_VERSION = 10.99.0-991-gd3bb3db575`)
 Maintainer refresh flow:
 
 ```bash

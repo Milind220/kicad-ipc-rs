@@ -8,19 +8,21 @@
 
 ### Key Features
 
-- **100% API Coverage**: All 59 KiCad v10.0.1 API commands implemented
+- **KiCad 11 Groundwork**: protos regenerated from KiCad `10.99.0-991-gd3bb3db575`
+- **Raw KiCad 11 Access**: generated protobuf modules plus command helpers for new IPC families
+- **KiCad 10 Wrapper Coverage**: existing typed wrappers remain available while KiCad 11 wrappers are tracked
 - **Type-Safe Models**: Native Rust structs for tracks, vias, footprints, nets, and more
 - **Dual API**: Async-first design with full synchronous support via `blocking` feature
-- **Zero Protobuf Hassle**: Pre-generated types — no KiCad source checkout needed
+- **Checked-In Protos**: no KiCad source checkout needed for consumers
 - **Field-Used**: Applied in automation and integration workflows
 
 ### API Comparison
 | Capability | `kicad-ipc-rs` | Python bindings | Official Rust |
 |------------|---------------|-----------------|---------------|
-| Rust-native API | ✅ Production-ready | ❌ Python only | ⚠️ Preview |
-| Async + Sync | ✅ Both supported | ⚠️ Event-loop | ⚠️ Preview |
-| Complete coverage | ✅ 59/59 commands | Unknown | Unknown |
-| Active maintenance | ✅ Yes | ✅ Official | ⚠️ Preview |
+| Rust-native API | KiCad 10 typed, KiCad 11 raw-first | Python only | Preview |
+| Async + Sync | Both supported | Event-loop | Preview |
+| KiCad 11 coverage | Raw proto/helper groundwork | Unknown | Unknown |
+| Active maintenance | Yes | Official | Preview |
 
 ## Project Goals
 - Rust-native API for all KiCad IPC commands
@@ -32,13 +34,15 @@
 ## Current Scope
 
 - KiCad API proto snapshot pinned in repo (`src/proto/generated/`)
-- 59/59 wrapped command families from KiCad v10.0.1
-- Runtime behavior validated in CI and manual checks against KiCad 10.0.1
+- KiCad 11 / 10.99 generated modules exposed under `kicad_ipc_rs::proto`
+- Raw command helpers for new project, editor, board, schematic, and job command families
+- Existing KiCad 10 typed wrappers retained pending KiCad 11 wrapper design
 
 ## Core Entrypoints
 - **Async**: `kicad_ipc_rs::KiCadClient`
 - **Blocking**: `kicad_ipc_rs::KiCadClientBlocking` (enable `blocking` feature)
 - **Errors**: `kicad_ipc_rs::KiCadError`
+- **Raw KiCad 11**: `kicad_ipc_rs::commands::*`, `kicad_ipc_rs::proto`, `KiCadClient::send_raw_command`
 
 ## Getting Started
 

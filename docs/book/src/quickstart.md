@@ -2,7 +2,7 @@
 
 ## Prereqs
 
-1. KiCad running on the same machine.
+1. KiCad 11 development / 10.99 running on the same machine, or headless `kicad-cli api-server`.
 2. IPC socket available (default discovery, or `KICAD_API_SOCKET`).
 3. Optional auth token in `KICAD_API_TOKEN` if your setup requires it.
 

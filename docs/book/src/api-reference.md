@@ -10,12 +10,21 @@ Key items:
 - `KiCadClientBlocking` (`blocking` feature)
 - `KiCadError`
 - Typed models under `model::*`
+- Generated KiCad 11 protos under `proto::kiapi::*`
+- Raw command packers under `commands::*`
 
 PCB item API layers:
 
 - Raw IPC: `*_raw` methods return `prost_types::Any` payloads for direct protobuf interop.
+- KiCad 11 raw IPC: construct generated protobuf commands, pack them with `commands::*`, then call `KiCadClient::send_raw_command`.
 - Read model: `PcbItem` and related `Pcb*` structs are lightweight decoded models for inspection.
 - Editable model: `EditablePcbItem` and typed wrappers preserve the full protobuf payload for mutate/update workflows.
+
+KiCad 11 status:
+
+- Proto snapshot: `10.99.0-991-gd3bb3db575`.
+- New KiCad 11 command families are raw-first.
+- Missing typed wrappers are tracked in [KiCad 11 IPC Plan](../../KICAD_11_IPC_PLAN.md).
 
 Editable item helpers:
 
