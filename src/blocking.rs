@@ -425,6 +425,7 @@ impl KiCadClientBlocking {
     }
 
     blocking_methods! {
+        fn send_raw_command(&self, command: Any) -> Result<Any, KiCadError>;
         fn ping(&self) -> Result<(), KiCadError>;
         fn refresh_editor(&self, frame: EditorFrameType) -> Result<(), KiCadError>;
         fn get_version(&self) -> Result<VersionInfo, KiCadError>;

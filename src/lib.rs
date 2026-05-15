@@ -80,6 +80,12 @@ mod kicad_api_version;
 /// Stable data models used by typed client APIs.
 #[allow(missing_docs)]
 pub mod model;
+/// Generated protobuf bindings for low-level IPC work.
+///
+/// This surface tracks the checked-in KiCad proto snapshot and may change when
+/// the submodule is regenerated.
+#[allow(missing_docs)]
+pub mod proto;
 /// IPC transport implementation details.
 ///
 /// Most applications should not need to use this module directly.
@@ -91,7 +97,6 @@ pub mod transport;
 pub mod blocking;
 
 pub(crate) mod pcb_item_type_urls;
-pub(crate) mod proto;
 #[cfg(feature = "blocking")]
 pub use crate::blocking::{KiCadClientBlocking, KiCadClientBlockingBuilder};
 pub use crate::client::{ClientBuilder, KiCadClient};

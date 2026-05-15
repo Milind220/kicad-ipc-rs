@@ -372,6 +372,23 @@ impl KiCadClient {
     pub fn socket_uri(&self) -> &str {
         &self.inner.socket_uri
     }
+
+    /// Sends a pre-packed protobuf command and returns KiCad's raw response payload.
+    ///
+    /// Use [`crate::commands`] helpers to pack generated protobuf command structs
+    /// into the `Any` envelope expected by KiCad.
+    pub async fn send_raw_command(
+        &self,
+        command: prost_types::Any,
+    ) -> Result<prost_types::Any, KiCadError> {
+        self.send_command(command)
+            .await?
+            .message
+            .ok_or_else(|| KiCadError::InvalidResponse {
+                reason: "raw command response missing payload".to_string(),
+            })
+    }
+
     pub(crate) async fn send_command(
         &self,
         command: prost_types::Any,
