@@ -24,7 +24,9 @@ use crate::proto::kiapi::common::types as common_types;
 impl KiCadClient {
     /// Starts a commit session and returns the raw begin-commit payload.
     pub async fn begin_commit_raw(&self) -> Result<prost_types::Any, KiCadError> {
-        let command = common_commands::BeginCommit {};
+        let command = common_commands::BeginCommit {
+            header: Some(self.current_board_item_header().await?),
+        };
         let response = self
             .send_command(envelope::pack_any(&command, CMD_BEGIN_COMMIT))
             .await?;
@@ -56,6 +58,7 @@ impl KiCadClient {
             id: Some(common_types::Kiid { value: session.id }),
             action: commit_action_to_proto(action),
             message: message.into(),
+            header: Some(self.current_board_item_header().await?),
         };
         let response = self
             .send_command(envelope::pack_any(&command, CMD_END_COMMIT))

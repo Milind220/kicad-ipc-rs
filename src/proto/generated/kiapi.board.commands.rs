@@ -59,6 +59,47 @@ pub struct GraphicsDefaultsResponse {
     #[prost(message, optional, tag = "1")]
     pub defaults: ::core::option::Option<super::GraphicsDefaults>,
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetBoardDesignRules {
+    #[prost(message, optional, tag = "1")]
+    pub board: ::core::option::Option<super::super::common::types::DocumentSpecifier>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SetBoardDesignRules {
+    #[prost(message, optional, tag = "1")]
+    pub board: ::core::option::Option<super::super::common::types::DocumentSpecifier>,
+    #[prost(message, optional, tag = "2")]
+    pub rules: ::core::option::Option<super::BoardDesignRules>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BoardDesignRulesResponse {
+    #[prost(message, optional, tag = "1")]
+    pub rules: ::core::option::Option<super::BoardDesignRules>,
+    #[prost(enumeration = "CustomRulesStatus", tag = "2")]
+    pub custom_rules_status: i32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetCustomDesignRules {
+    #[prost(message, optional, tag = "1")]
+    pub board: ::core::option::Option<super::super::common::types::DocumentSpecifier>,
+}
+/// Returns CustomRulesResponse
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SetCustomDesignRules {
+    #[prost(message, optional, tag = "1")]
+    pub board: ::core::option::Option<super::super::common::types::DocumentSpecifier>,
+    #[prost(message, repeated, tag = "2")]
+    pub rules: ::prost::alloc::vec::Vec<super::CustomRule>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CustomRulesResponse {
+    #[prost(enumeration = "CustomRulesStatus", tag = "1")]
+    pub status: i32,
+    #[prost(message, repeated, tag = "2")]
+    pub rules: ::prost::alloc::vec::Vec<super::CustomRule>,
+    #[prost(string, tag = "3")]
+    pub error_text: ::prost::alloc::string::String,
+}
 /// Returns a Vector2 with the specified origin point
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetBoardOrigin {
@@ -338,6 +379,38 @@ pub struct InteractiveMoveItems {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
+pub enum CustomRulesStatus {
+    CrsUnknown = 0,
+    CrsNone = 1,
+    CrsValid = 2,
+    CrsInvalid = 3,
+}
+impl CustomRulesStatus {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::CrsUnknown => "CRS_UNKNOWN",
+            Self::CrsNone => "CRS_NONE",
+            Self::CrsValid => "CRS_VALID",
+            Self::CrsInvalid => "CRS_INVALID",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CRS_UNKNOWN" => Some(Self::CrsUnknown),
+            "CRS_NONE" => Some(Self::CrsNone),
+            "CRS_VALID" => Some(Self::CrsValid),
+            "CRS_INVALID" => Some(Self::CrsInvalid),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
 pub enum BoardOriginType {
     BotUnknown = 0,
     BotGrid = 1,
@@ -396,6 +469,7 @@ impl PadstackPresence {
         }
     }
 }
+/// Deprecated - use common.types.RuleSeverity
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum DrcSeverity {

@@ -283,6 +283,47 @@ impl StrokeLineStyle {
         }
     }
 }
+/// Units used for various commands that can have customizable units (e.g. export jobs).
+/// All internal API commands use nanometers.
+/// Not every value is accepted by every command; check the documentation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum Units {
+    UUnknown = 0,
+    UInch = 1,
+    UMm = 2,
+    UMils = 3,
+    UMeters = 4,
+    UTenths = 5,
+}
+impl Units {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::UUnknown => "U_UNKNOWN",
+            Self::UInch => "U_INCH",
+            Self::UMm => "U_MM",
+            Self::UMils => "U_MILS",
+            Self::UMeters => "U_METERS",
+            Self::UTenths => "U_TENTHS",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "U_UNKNOWN" => Some(Self::UUnknown),
+            "U_INCH" => Some(Self::UInch),
+            "U_MM" => Some(Self::UMm),
+            "U_MILS" => Some(Self::UMils),
+            "U_METERS" => Some(Self::UMeters),
+            "U_TENTHS" => Some(Self::UTenths),
+            _ => None,
+        }
+    }
+}
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CommandStatusResponse {
     #[prost(enumeration = "CommandStatus", tag = "1")]
@@ -361,7 +402,8 @@ pub mod document_specifier {
         /// If type == DT_SYMBOL or DT_FOOTPRINT, identifies a certain library entry
         #[prost(message, tag = "2")]
         LibId(super::LibraryIdentifier),
-        /// If type == DT_SCHEMATIC, identifies a sheet with a given path
+        /// If type == DT_SCHEMATIC, identifies a sheet with a given path.  This is relevant when
+        /// specifying a child sheet in a given hierarchical schematic.
         #[prost(message, tag = "3")]
         SheetPath(super::SheetPath),
         /// If type == DT_PCB, identifies a PCB with a given filename, e.g. "board.kicad_pcb"
@@ -536,6 +578,9 @@ pub struct TextAttributes {
     pub keep_upright: bool,
     #[prost(message, optional, tag = "14")]
     pub size: ::core::option::Option<Vector2>,
+    /// May be present for schematic text; meaningless for board text
+    #[prost(message, optional, tag = "15")]
+    pub color: ::core::option::Option<Color>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Text {
@@ -630,6 +675,32 @@ pub struct GraphicBezierAttributes {
     #[prost(message, optional, tag = "4")]
     pub end: ::core::option::Option<Vector2>,
 }
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GraphicEllipseAttributes {
+    #[prost(message, optional, tag = "1")]
+    pub center: ::core::option::Option<Vector2>,
+    #[prost(message, optional, tag = "2")]
+    pub major_radius: ::core::option::Option<Distance>,
+    #[prost(message, optional, tag = "3")]
+    pub minor_radius: ::core::option::Option<Distance>,
+    #[prost(message, optional, tag = "4")]
+    pub rotation: ::core::option::Option<Angle>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GraphicEllipseArcAttributes {
+    #[prost(message, optional, tag = "1")]
+    pub center: ::core::option::Option<Vector2>,
+    #[prost(message, optional, tag = "2")]
+    pub major_radius: ::core::option::Option<Distance>,
+    #[prost(message, optional, tag = "3")]
+    pub minor_radius: ::core::option::Option<Distance>,
+    #[prost(message, optional, tag = "4")]
+    pub rotation: ::core::option::Option<Angle>,
+    #[prost(message, optional, tag = "5")]
+    pub start_angle: ::core::option::Option<Angle>,
+    #[prost(message, optional, tag = "6")]
+    pub end_angle: ::core::option::Option<Angle>,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GraphicShape {
     /// Reserved for future use; base EDA_SHAPE doesn't have an ID or locked state right now
@@ -637,7 +708,7 @@ pub struct GraphicShape {
     /// LockedState       locked     = 2;
     #[prost(message, optional, tag = "3")]
     pub attributes: ::core::option::Option<GraphicAttributes>,
-    #[prost(oneof = "graphic_shape::Geometry", tags = "4, 5, 6, 7, 8, 9")]
+    #[prost(oneof = "graphic_shape::Geometry", tags = "4, 5, 6, 7, 8, 9, 10, 11")]
     pub geometry: ::core::option::Option<graphic_shape::Geometry>,
 }
 /// Nested message and enum types in `GraphicShape`.
@@ -656,6 +727,10 @@ pub mod graphic_shape {
         Polygon(super::PolySet),
         #[prost(message, tag = "9")]
         Bezier(super::GraphicBezierAttributes),
+        #[prost(message, tag = "10")]
+        Ellipse(super::GraphicEllipseAttributes),
+        #[prost(message, tag = "11")]
+        EllipseArc(super::GraphicEllipseArcAttributes),
     }
 }
 /// A SHAPE_COMPOUND in KiCad
@@ -693,6 +768,39 @@ pub struct TitleBlockInfo {
     pub comment8: ::prost::alloc::string::String,
     #[prost(string, tag = "13")]
     pub comment9: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RuleCheckerMarkerId {
+    #[prost(string, tag = "1")]
+    pub opaque_id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RuleCheckerMarker {
+    #[prost(message, optional, tag = "1")]
+    pub id: ::core::option::Option<RuleCheckerMarkerId>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct MinOptMax {
+    #[prost(int32, optional, tag = "1")]
+    pub min: ::core::option::Option<i32>,
+    #[prost(int32, optional, tag = "2")]
+    pub opt: ::core::option::Option<i32>,
+    #[prost(int32, optional, tag = "3")]
+    pub max: ::core::option::Option<i32>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PageSettings {
+    #[prost(enumeration = "PageSize", tag = "1")]
+    pub page_size: i32,
+    /// Relevant only when page_size == PS_USER
+    #[prost(message, optional, tag = "2")]
+    pub user_page_size: ::core::option::Option<Vector2>,
+    #[prost(enumeration = "PageOrientation", tag = "4")]
+    pub orientation: i32,
+    /// Path to a .kicad_wks drawing sheet file.
+    /// Empty string means the default (built-in) drawing sheet is used.
+    #[prost(string, tag = "5")]
+    pub drawing_sheet: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -886,6 +994,11 @@ pub enum GraphicFillType {
     GftUnknown = 0,
     GftUnfilled = 1,
     GftFilled = 2,
+    GftFilledWithColor = 3,
+    GftFilledWithBackgroundBodyColor = 4,
+    GftHatch = 5,
+    GftReverseHatch = 6,
+    GftCrossHatch = 7,
 }
 impl GraphicFillType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -897,6 +1010,13 @@ impl GraphicFillType {
             Self::GftUnknown => "GFT_UNKNOWN",
             Self::GftUnfilled => "GFT_UNFILLED",
             Self::GftFilled => "GFT_FILLED",
+            Self::GftFilledWithColor => "GFT_FILLED_WITH_COLOR",
+            Self::GftFilledWithBackgroundBodyColor => {
+                "GFT_FILLED_WITH_BACKGROUND_BODY_COLOR"
+            }
+            Self::GftHatch => "GFT_HATCH",
+            Self::GftReverseHatch => "GFT_REVERSE_HATCH",
+            Self::GftCrossHatch => "GFT_CROSS_HATCH",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -905,6 +1025,13 @@ impl GraphicFillType {
             "GFT_UNKNOWN" => Some(Self::GftUnknown),
             "GFT_UNFILLED" => Some(Self::GftUnfilled),
             "GFT_FILLED" => Some(Self::GftFilled),
+            "GFT_FILLED_WITH_COLOR" => Some(Self::GftFilledWithColor),
+            "GFT_FILLED_WITH_BACKGROUND_BODY_COLOR" => {
+                Some(Self::GftFilledWithBackgroundBodyColor)
+            }
+            "GFT_HATCH" => Some(Self::GftHatch),
+            "GFT_REVERSE_HATCH" => Some(Self::GftReverseHatch),
+            "GFT_CROSS_HATCH" => Some(Self::GftCrossHatch),
             _ => None,
         }
     }
@@ -1027,6 +1154,472 @@ impl ElectricalPinType {
             "EPT_OPEN_COLLECTOR" => Some(Self::EptOpenCollector),
             "EPT_OPEN_EMITTER" => Some(Self::EptOpenEmitter),
             "EPT_NO_CONNECT" => Some(Self::EptNoConnect),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum RuleSeverity {
+    RsUnknown = 0,
+    RsWarning = 1,
+    RsError = 2,
+    RsExclusion = 3,
+    RsIgnore = 4,
+    RsInfo = 5,
+    RsAction = 6,
+    RsDebug = 7,
+    RsUndefined = 8,
+}
+impl RuleSeverity {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::RsUnknown => "RS_UNKNOWN",
+            Self::RsWarning => "RS_WARNING",
+            Self::RsError => "RS_ERROR",
+            Self::RsExclusion => "RS_EXCLUSION",
+            Self::RsIgnore => "RS_IGNORE",
+            Self::RsInfo => "RS_INFO",
+            Self::RsAction => "RS_ACTION",
+            Self::RsDebug => "RS_DEBUG",
+            Self::RsUndefined => "RS_UNDEFINED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "RS_UNKNOWN" => Some(Self::RsUnknown),
+            "RS_WARNING" => Some(Self::RsWarning),
+            "RS_ERROR" => Some(Self::RsError),
+            "RS_EXCLUSION" => Some(Self::RsExclusion),
+            "RS_IGNORE" => Some(Self::RsIgnore),
+            "RS_INFO" => Some(Self::RsInfo),
+            "RS_ACTION" => Some(Self::RsAction),
+            "RS_DEBUG" => Some(Self::RsDebug),
+            "RS_UNDEFINED" => Some(Self::RsUndefined),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum PageSize {
+    PsUnknown = 0,
+    PsA5 = 1,
+    PsA4 = 2,
+    PsA3 = 3,
+    PsA2 = 4,
+    PsA1 = 5,
+    PsA0 = 6,
+    /// ANSI A (8.5 x 11 in)
+    PsAnsiA = 7,
+    /// ANSI B (11 x 17 in)
+    PsAnsiB = 8,
+    /// ANSI C (17 x 22 in)
+    PsAnsiC = 9,
+    /// ANSI D (22 x 34 in)
+    PsAnsiD = 10,
+    /// ANSI E (34 x 44 in)
+    PsAnsiE = 11,
+    /// 32 x 32 in
+    PsGerber = 12,
+    PsUsLetter = 13,
+    PsUsLegal = 14,
+    PsUsLedger = 15,
+    PsUser = 16,
+}
+impl PageSize {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::PsUnknown => "PS_UNKNOWN",
+            Self::PsA5 => "PS_A5",
+            Self::PsA4 => "PS_A4",
+            Self::PsA3 => "PS_A3",
+            Self::PsA2 => "PS_A2",
+            Self::PsA1 => "PS_A1",
+            Self::PsA0 => "PS_A0",
+            Self::PsAnsiA => "PS_ANSI_A",
+            Self::PsAnsiB => "PS_ANSI_B",
+            Self::PsAnsiC => "PS_ANSI_C",
+            Self::PsAnsiD => "PS_ANSI_D",
+            Self::PsAnsiE => "PS_ANSI_E",
+            Self::PsGerber => "PS_GERBER",
+            Self::PsUsLetter => "PS_US_LETTER",
+            Self::PsUsLegal => "PS_US_LEGAL",
+            Self::PsUsLedger => "PS_US_LEDGER",
+            Self::PsUser => "PS_USER",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "PS_UNKNOWN" => Some(Self::PsUnknown),
+            "PS_A5" => Some(Self::PsA5),
+            "PS_A4" => Some(Self::PsA4),
+            "PS_A3" => Some(Self::PsA3),
+            "PS_A2" => Some(Self::PsA2),
+            "PS_A1" => Some(Self::PsA1),
+            "PS_A0" => Some(Self::PsA0),
+            "PS_ANSI_A" => Some(Self::PsAnsiA),
+            "PS_ANSI_B" => Some(Self::PsAnsiB),
+            "PS_ANSI_C" => Some(Self::PsAnsiC),
+            "PS_ANSI_D" => Some(Self::PsAnsiD),
+            "PS_ANSI_E" => Some(Self::PsAnsiE),
+            "PS_GERBER" => Some(Self::PsGerber),
+            "PS_US_LETTER" => Some(Self::PsUsLetter),
+            "PS_US_LEGAL" => Some(Self::PsUsLegal),
+            "PS_US_LEDGER" => Some(Self::PsUsLedger),
+            "PS_USER" => Some(Self::PsUser),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum PageOrientation {
+    PoUnknown = 0,
+    PoLandscape = 1,
+    PoPortrait = 2,
+}
+impl PageOrientation {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::PoUnknown => "PO_UNKNOWN",
+            Self::PoLandscape => "PO_LANDSCAPE",
+            Self::PoPortrait => "PO_PORTRAIT",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "PO_UNKNOWN" => Some(Self::PoUnknown),
+            "PO_LANDSCAPE" => Some(Self::PoLandscape),
+            "PO_PORTRAIT" => Some(Self::PoPortrait),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RunJobResponse {
+    #[prost(enumeration = "JobStatus", tag = "1")]
+    pub status: i32,
+    /// The path of the generated output (may not actually exist in the filesystem if the job failed)
+    /// May be a file, multiple files, or a directory depending on the context of the job
+    #[prost(string, repeated, tag = "2")]
+    pub output_path: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Optional message containing warning or error details. Should be empty if status is JS_SUCCESS.
+    #[prost(string, tag = "3")]
+    pub message: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RunJobSettings {
+    /// The document on which the job should be run
+    #[prost(message, optional, tag = "1")]
+    pub document: ::core::option::Option<DocumentSpecifier>,
+    /// The path where the job's output should be saved
+    /// May be a file or a directory depending on the context of the job
+    #[prost(string, tag = "2")]
+    pub output_path: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum JobStatus {
+    JsUnspecified = 0,
+    JsSuccess = 1,
+    JsWarning = 2,
+    JsError = 3,
+}
+impl JobStatus {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::JsUnspecified => "JS_UNSPECIFIED",
+            Self::JsSuccess => "JS_SUCCESS",
+            Self::JsWarning => "JS_WARNING",
+            Self::JsError => "JS_ERROR",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "JS_UNSPECIFIED" => Some(Self::JsUnspecified),
+            "JS_SUCCESS" => Some(Self::JsSuccess),
+            "JS_WARNING" => Some(Self::JsWarning),
+            "JS_ERROR" => Some(Self::JsError),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct WizardIntParameter {
+    #[prost(int32, tag = "1")]
+    pub value: i32,
+    #[prost(int32, tag = "2")]
+    pub default: i32,
+    #[prost(int32, optional, tag = "3")]
+    pub min: ::core::option::Option<i32>,
+    #[prost(int32, optional, tag = "4")]
+    pub max: ::core::option::Option<i32>,
+    /// If present, will require the value to be a multiple of this number
+    #[prost(int32, optional, tag = "5")]
+    pub multiple: ::core::option::Option<i32>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct WizardRealParameter {
+    #[prost(double, tag = "1")]
+    pub value: f64,
+    #[prost(double, tag = "2")]
+    pub default: f64,
+    #[prost(double, optional, tag = "3")]
+    pub min: ::core::option::Option<f64>,
+    #[prost(double, optional, tag = "4")]
+    pub max: ::core::option::Option<f64>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct WizardBoolParameter {
+    #[prost(bool, tag = "1")]
+    pub value: bool,
+    #[prost(bool, tag = "2")]
+    pub default: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct WizardStringParameter {
+    #[prost(string, tag = "1")]
+    pub value: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub default: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "3")]
+    pub validation_regex: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct WizardParameterList {
+    #[prost(message, repeated, tag = "1")]
+    pub parameters: ::prost::alloc::vec::Vec<WizardParameter>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct WizardParameter {
+    /// An internal identifier for this parameter; must be unique within a wizard
+    #[prost(string, tag = "1")]
+    pub identifier: ::prost::alloc::string::String,
+    /// The human-readable name for this parameter (may be translated)
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    /// A human-readable description / tooltip string (may be translated)
+    #[prost(string, tag = "3")]
+    pub description: ::prost::alloc::string::String,
+    #[prost(enumeration = "WizardParameterCategory", tag = "4")]
+    pub category: i32,
+    #[prost(enumeration = "WizardParameterDataType", tag = "5")]
+    pub r#type: i32,
+    #[prost(oneof = "wizard_parameter::Value", tags = "6, 7, 8, 9")]
+    pub value: ::core::option::Option<wizard_parameter::Value>,
+}
+/// Nested message and enum types in `WizardParameter`.
+pub mod wizard_parameter {
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Value {
+        #[prost(message, tag = "6")]
+        Int(super::WizardIntParameter),
+        #[prost(message, tag = "7")]
+        Real(super::WizardRealParameter),
+        #[prost(message, tag = "8")]
+        Bool(super::WizardBoolParameter),
+        #[prost(message, tag = "9")]
+        String(super::WizardStringParameter),
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct WizardInfo {
+    #[prost(message, optional, tag = "1")]
+    pub meta: ::core::option::Option<WizardMetaInfo>,
+    #[prost(message, repeated, tag = "2")]
+    pub parameters: ::prost::alloc::vec::Vec<WizardParameter>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct WizardMetaInfo {
+    #[prost(string, tag = "1")]
+    pub identifier: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub description: ::prost::alloc::string::String,
+    #[prost(enumeration = "WizardContentType", repeated, tag = "4")]
+    pub types_generated: ::prost::alloc::vec::Vec<i32>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct WizardGeneratedContent {
+    #[prost(enumeration = "WizardGenerationStatus", tag = "1")]
+    pub status: i32,
+    #[prost(message, optional, tag = "2")]
+    pub content: ::core::option::Option<::prost_types::Any>,
+    #[prost(string, tag = "3")]
+    pub error_message: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum WizardParameterDataType {
+    WpdtUnknown = 0,
+    /// int32 nanometers
+    WpdtDistance = 1,
+    /// int32 square nanometers
+    WpdtArea = 2,
+    /// int32 cubic nanometers (not currently supported in KiCad)
+    WpdtVolume = 3,
+    /// int32 picoseconds
+    WpdtTime = 4,
+    /// double degrees
+    WpdtAngle = 5,
+    WpdtString = 6,
+    /// int32 (quantity, etc)
+    WpdtInteger = 7,
+    /// double value
+    WpdtReal = 8,
+    /// boolean flag
+    WpdtBool = 9,
+}
+impl WizardParameterDataType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::WpdtUnknown => "WPDT_UNKNOWN",
+            Self::WpdtDistance => "WPDT_DISTANCE",
+            Self::WpdtArea => "WPDT_AREA",
+            Self::WpdtVolume => "WPDT_VOLUME",
+            Self::WpdtTime => "WPDT_TIME",
+            Self::WpdtAngle => "WPDT_ANGLE",
+            Self::WpdtString => "WPDT_STRING",
+            Self::WpdtInteger => "WPDT_INTEGER",
+            Self::WpdtReal => "WPDT_REAL",
+            Self::WpdtBool => "WPDT_BOOL",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "WPDT_UNKNOWN" => Some(Self::WpdtUnknown),
+            "WPDT_DISTANCE" => Some(Self::WpdtDistance),
+            "WPDT_AREA" => Some(Self::WpdtArea),
+            "WPDT_VOLUME" => Some(Self::WpdtVolume),
+            "WPDT_TIME" => Some(Self::WpdtTime),
+            "WPDT_ANGLE" => Some(Self::WpdtAngle),
+            "WPDT_STRING" => Some(Self::WpdtString),
+            "WPDT_INTEGER" => Some(Self::WpdtInteger),
+            "WPDT_REAL" => Some(Self::WpdtReal),
+            "WPDT_BOOL" => Some(Self::WpdtBool),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum WizardParameterCategory {
+    WpcUnknown = 0,
+    WpcPackage = 1,
+    WpcPads = 2,
+    Wpc3dmodel = 3,
+    WpcMetadata = 4,
+    WpcRules = 5,
+}
+impl WizardParameterCategory {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::WpcUnknown => "WPC_UNKNOWN",
+            Self::WpcPackage => "WPC_PACKAGE",
+            Self::WpcPads => "WPC_PADS",
+            Self::Wpc3dmodel => "WPC_3DMODEL",
+            Self::WpcMetadata => "WPC_METADATA",
+            Self::WpcRules => "WPC_RULES",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "WPC_UNKNOWN" => Some(Self::WpcUnknown),
+            "WPC_PACKAGE" => Some(Self::WpcPackage),
+            "WPC_PADS" => Some(Self::WpcPads),
+            "WPC_3DMODEL" => Some(Self::Wpc3dmodel),
+            "WPC_METADATA" => Some(Self::WpcMetadata),
+            "WPC_RULES" => Some(Self::WpcRules),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum WizardContentType {
+    WctUnknown = 0,
+    WctSymbol = 1,
+    WctFootprint = 2,
+}
+impl WizardContentType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::WctUnknown => "WCT_UNKNOWN",
+            Self::WctSymbol => "WCT_SYMBOL",
+            Self::WctFootprint => "WCT_FOOTPRINT",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "WCT_UNKNOWN" => Some(Self::WctUnknown),
+            "WCT_SYMBOL" => Some(Self::WctSymbol),
+            "WCT_FOOTPRINT" => Some(Self::WctFootprint),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum WizardGenerationStatus {
+    WgsUnknown = 0,
+    WgsOk = 1,
+    WgsError = 2,
+}
+impl WizardGenerationStatus {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::WgsUnknown => "WGS_UNKNOWN",
+            Self::WgsOk => "WGS_OK",
+            Self::WgsError => "WGS_ERROR",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "WGS_UNKNOWN" => Some(Self::WgsUnknown),
+            "WGS_OK" => Some(Self::WgsOk),
+            "WGS_ERROR" => Some(Self::WgsError),
             _ => None,
         }
     }

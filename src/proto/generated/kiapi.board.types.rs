@@ -381,6 +381,21 @@ pub struct HatchFillSettings {
     #[prost(enumeration = "ZoneHatchFillBorderMode", tag = "6")]
     pub border_mode: i32,
 }
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ThievingFillSettings {
+    #[prost(enumeration = "ThievingPattern", tag = "1")]
+    pub pattern: i32,
+    #[prost(message, optional, tag = "2")]
+    pub element_size: ::core::option::Option<super::super::common::types::Distance>,
+    #[prost(message, optional, tag = "3")]
+    pub gap: ::core::option::Option<super::super::common::types::Distance>,
+    #[prost(message, optional, tag = "4")]
+    pub line_width: ::core::option::Option<super::super::common::types::Distance>,
+    #[prost(bool, tag = "5")]
+    pub stagger: bool,
+    #[prost(message, optional, tag = "6")]
+    pub orientation: ::core::option::Option<super::super::common::types::Angle>,
+}
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TeardropSettings {
     #[prost(enumeration = "TeardropType", tag = "1")]
@@ -406,6 +421,8 @@ pub struct CopperZoneSettings {
     pub net: ::core::option::Option<Net>,
     #[prost(message, optional, tag = "9")]
     pub teardrop: ::core::option::Option<TeardropSettings>,
+    #[prost(message, optional, tag = "10")]
+    pub thieving_settings: ::core::option::Option<ThievingFillSettings>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RuleAreaSettings {
@@ -1826,6 +1843,7 @@ pub enum ZoneFillMode {
     ZfmUnknown = 0,
     ZfmSolid = 1,
     ZfmHatched = 2,
+    ZfmCopperThieving = 3,
 }
 impl ZoneFillMode {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1837,6 +1855,7 @@ impl ZoneFillMode {
             Self::ZfmUnknown => "ZFM_UNKNOWN",
             Self::ZfmSolid => "ZFM_SOLID",
             Self::ZfmHatched => "ZFM_HATCHED",
+            Self::ZfmCopperThieving => "ZFM_COPPER_THIEVING",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1845,6 +1864,7 @@ impl ZoneFillMode {
             "ZFM_UNKNOWN" => Some(Self::ZfmUnknown),
             "ZFM_SOLID" => Some(Self::ZfmSolid),
             "ZFM_HATCHED" => Some(Self::ZfmHatched),
+            "ZFM_COPPER_THIEVING" => Some(Self::ZfmCopperThieving),
             _ => None,
         }
     }
@@ -1909,6 +1929,38 @@ impl ZoneHatchFillBorderMode {
             "ZHFBM_UNKNOWN" => Some(Self::ZhfbmUnknown),
             "ZHFBM_USE_MIN_ZONE_THICKNESS" => Some(Self::ZhfbmUseMinZoneThickness),
             "ZHFBM_USE_HATCH_THICKNESS" => Some(Self::ZhfbmUseHatchThickness),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ThievingPattern {
+    TpUnknown = 0,
+    TpDots = 1,
+    TpSquares = 2,
+    TpCrosshatch = 3,
+}
+impl ThievingPattern {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::TpUnknown => "TP_UNKNOWN",
+            Self::TpDots => "TP_DOTS",
+            Self::TpSquares => "TP_SQUARES",
+            Self::TpCrosshatch => "TP_CROSSHATCH",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "TP_UNKNOWN" => Some(Self::TpUnknown),
+            "TP_DOTS" => Some(Self::TpDots),
+            "TP_SQUARES" => Some(Self::TpSquares),
+            "TP_CROSSHATCH" => Some(Self::TpCrosshatch),
             _ => None,
         }
     }

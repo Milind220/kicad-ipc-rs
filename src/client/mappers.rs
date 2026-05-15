@@ -76,6 +76,7 @@ pub(crate) fn text_attributes_spec_to_proto(
         multiline: attributes.multiline,
         keep_upright: attributes.keep_upright,
         size: attributes.size_nm.map(vector2_nm_to_proto),
+        color: None,
     }
 }
 
@@ -253,6 +254,10 @@ pub(crate) fn map_text_shape_geometry(
                 control2_nm: bezier.control2.map(map_vector2_nm),
                 end_nm: bezier.end.map(map_vector2_nm),
             })
+        }
+        Some(common_types::graphic_shape::Geometry::Ellipse(_))
+        | Some(common_types::graphic_shape::Geometry::EllipseArc(_)) => {
+            Ok(TextShapeGeometry::Unknown)
         }
         None => Ok(TextShapeGeometry::Unknown),
     }
@@ -1180,5 +1185,7 @@ pub(crate) fn map_graphic_shape_geometry(
                 end_nm: bezier.end.map(map_vector2_nm),
             })
         }
+        common_types::graphic_shape::Geometry::Ellipse(_)
+        | common_types::graphic_shape::Geometry::EllipseArc(_) => None,
     }
 }

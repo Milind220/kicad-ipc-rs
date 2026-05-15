@@ -27,6 +27,10 @@ pub(crate) mod kiapi {
             include!("generated/kiapi.board.commands.rs");
         }
 
+        pub mod jobs {
+            include!("generated/kiapi.board.jobs.rs");
+        }
+
         pub mod types {
             include!("generated/kiapi.board.types.rs");
         }
@@ -34,6 +38,10 @@ pub(crate) mod kiapi {
 
     #[allow(dead_code)]
     pub mod schematic {
+        pub mod jobs {
+            include!("generated/kiapi.schematic.jobs.rs");
+        }
+
         pub mod types {
             include!("generated/kiapi.schematic.types.rs");
         }

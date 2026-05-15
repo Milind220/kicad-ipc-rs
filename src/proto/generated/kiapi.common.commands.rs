@@ -99,11 +99,6 @@ pub struct GetOpenDocumentsResponse {
     #[prost(message, repeated, tag = "1")]
     pub documents: ::prost::alloc::vec::Vec<super::types::DocumentSpecifier>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SaveDocument {
-    #[prost(message, optional, tag = "1")]
-    pub document: ::core::option::Option<super::types::DocumentSpecifier>,
-}
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SaveOptions {
     /// Overwrite destination file(s) if they exist
@@ -151,15 +146,19 @@ pub struct RunActionResponse {
 /// Begins a staged set of changes.  Any modifications made to a document through the API after this
 /// call will be saved to a pending commit, and will not appear in KiCad until a matching call to
 /// END_COMMIT.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct BeginCommit {}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BeginCommit {
+    /// Specifies which document to associate the commit with
+    #[prost(message, optional, tag = "1")]
+    pub header: ::core::option::Option<super::types::ItemHeader>,
+}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BeginCommitResponse {
     /// Opaque identifier tracking a commit
     #[prost(message, optional, tag = "1")]
     pub id: ::core::option::Option<super::types::Kiid>,
 }
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EndCommit {
     /// The ID that was given by BeginCommit
     #[prost(message, optional, tag = "1")]
@@ -170,6 +169,9 @@ pub struct EndCommit {
     /// Optional message describing this changeset
     #[prost(string, tag = "3")]
     pub message: ::prost::alloc::string::String,
+    /// Specifies which document to associate the commit with
+    #[prost(message, optional, tag = "4")]
+    pub header: ::core::option::Option<super::types::ItemHeader>,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EndCommitResponse {}
@@ -393,6 +395,19 @@ pub struct SetTitleBlockInfo {
     pub document: ::core::option::Option<super::types::DocumentSpecifier>,
     #[prost(message, optional, tag = "2")]
     pub title_block: ::core::option::Option<super::types::TitleBlockInfo>,
+}
+/// returns common.types.PageSettings
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetPageSettings {
+    #[prost(message, optional, tag = "1")]
+    pub document: ::core::option::Option<super::types::DocumentSpecifier>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SetPageSettings {
+    #[prost(message, optional, tag = "1")]
+    pub document: ::core::option::Option<super::types::DocumentSpecifier>,
+    #[prost(message, optional, tag = "2")]
+    pub page_settings: ::core::option::Option<super::types::PageSettings>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SaveDocumentToString {
@@ -680,4 +695,26 @@ pub struct SetTextVariables {
     /// Whether to merge or replace the existing text variables map with the contents of this message
     #[prost(enumeration = "super::types::MapMergeMode", tag = "3")]
     pub merge_mode: i32,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct OpenDocument {
+    #[prost(enumeration = "super::types::DocumentType", tag = "1")]
+    pub r#type: i32,
+    #[prost(string, tag = "2")]
+    pub path: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OpenDocumentResponse {
+    #[prost(message, optional, tag = "1")]
+    pub document: ::core::option::Option<super::types::DocumentSpecifier>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CloseDocument {
+    #[prost(message, optional, tag = "1")]
+    pub document: ::core::option::Option<super::types::DocumentSpecifier>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SaveDocument {
+    #[prost(message, optional, tag = "1")]
+    pub document: ::core::option::Option<super::types::DocumentSpecifier>,
 }

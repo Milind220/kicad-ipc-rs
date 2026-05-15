@@ -15,6 +15,8 @@ pub(crate) fn map_graphic_shape_kind(shape: Option<&common_types::GraphicShape>)
         common_types::graphic_shape::Geometry::Circle(_) => "CIRCLE".to_string(),
         common_types::graphic_shape::Geometry::Polygon(_) => "POLYGON".to_string(),
         common_types::graphic_shape::Geometry::Bezier(_) => "BEZIER".to_string(),
+        common_types::graphic_shape::Geometry::Ellipse(_) => "ELLIPSE".to_string(),
+        common_types::graphic_shape::Geometry::EllipseArc(_) => "ELLIPSE_ARC".to_string(),
     })
 }
 

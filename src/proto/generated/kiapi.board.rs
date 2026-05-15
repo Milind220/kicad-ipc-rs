@@ -104,7 +104,235 @@ pub struct BoardSettings {
     pub graphics_defaults: ::core::option::Option<GraphicsDefaults>,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct BoardDesignRules {}
+pub struct MinimumConstraints {
+    #[prost(message, optional, tag = "1")]
+    pub min_clearance: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "2")]
+    pub min_groove_width: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "3")]
+    pub min_connection_width: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "4")]
+    pub min_track_width: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "5")]
+    pub min_via_annular_width: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "6")]
+    pub min_via_size: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "7")]
+    pub min_through_drill: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "8")]
+    pub min_microvia_size: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "9")]
+    pub min_microvia_drill: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "10")]
+    pub copper_edge_clearance: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "11")]
+    pub hole_clearance: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "12")]
+    pub hole_to_hole_min: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "13")]
+    pub silk_clearance: ::core::option::Option<super::common::types::Distance>,
+    #[prost(int32, tag = "14")]
+    pub min_resolved_spokes: i32,
+    #[prost(message, optional, tag = "15")]
+    pub min_silk_text_height: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "16")]
+    pub min_silk_text_thickness: ::core::option::Option<super::common::types::Distance>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PresetTrackWidth {
+    #[prost(message, optional, tag = "1")]
+    pub width: ::core::option::Option<super::common::types::Distance>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PresetViaDimension {
+    #[prost(message, optional, tag = "1")]
+    pub diameter: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "2")]
+    pub drill: ::core::option::Option<super::common::types::Distance>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PresetDiffPairDimension {
+    #[prost(message, optional, tag = "1")]
+    pub width: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "2")]
+    pub gap: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "3")]
+    pub via_gap: ::core::option::Option<super::common::types::Distance>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PredefinedSizes {
+    #[prost(message, repeated, tag = "1")]
+    pub tracks: ::prost::alloc::vec::Vec<PresetTrackWidth>,
+    #[prost(message, repeated, tag = "2")]
+    pub vias: ::prost::alloc::vec::Vec<PresetViaDimension>,
+    #[prost(message, repeated, tag = "3")]
+    pub diff_pairs: ::prost::alloc::vec::Vec<PresetDiffPairDimension>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct SolderMaskPasteDefaults {
+    #[prost(message, optional, tag = "1")]
+    pub mask_expansion: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "2")]
+    pub mask_min_width: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "3")]
+    pub mask_to_copper_clearance: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "4")]
+    pub paste_margin: ::core::option::Option<super::common::types::Distance>,
+    #[prost(double, tag = "5")]
+    pub paste_margin_ratio: f64,
+    #[prost(bool, tag = "6")]
+    pub allow_soldermask_bridges_in_footprints: bool,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct TeardropTargetParams {
+    #[prost(bool, tag = "1")]
+    pub enabled: bool,
+    #[prost(message, optional, tag = "2")]
+    pub max_length: ::core::option::Option<super::common::types::Distance>,
+    #[prost(message, optional, tag = "3")]
+    pub max_width: ::core::option::Option<super::common::types::Distance>,
+    #[prost(double, tag = "4")]
+    pub best_length_ratio: f64,
+    #[prost(double, tag = "5")]
+    pub best_width_ratio: f64,
+    #[prost(double, tag = "6")]
+    pub width_to_size_filter_ratio: f64,
+    #[prost(bool, tag = "7")]
+    pub curved_edges: bool,
+    #[prost(bool, tag = "8")]
+    pub allow_two_tracks: bool,
+    #[prost(bool, tag = "9")]
+    pub on_pads_in_zones: bool,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct TeardropTargetEntry {
+    #[prost(enumeration = "TeardropTarget", tag = "1")]
+    pub target: i32,
+    #[prost(message, optional, tag = "2")]
+    pub params: ::core::option::Option<TeardropTargetParams>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TeardropDefaults {
+    #[prost(bool, tag = "1")]
+    pub target_vias: bool,
+    #[prost(bool, tag = "2")]
+    pub target_pth_pads: bool,
+    #[prost(bool, tag = "3")]
+    pub target_smd_pads: bool,
+    #[prost(bool, tag = "4")]
+    pub target_track_to_track: bool,
+    #[prost(bool, tag = "5")]
+    pub use_round_shapes_only: bool,
+    #[prost(message, repeated, tag = "6")]
+    pub target_params: ::prost::alloc::vec::Vec<TeardropTargetEntry>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ViaProtectionDefaults {
+    #[prost(bool, tag = "1")]
+    pub tent_front: bool,
+    #[prost(bool, tag = "2")]
+    pub tent_back: bool,
+    #[prost(bool, tag = "3")]
+    pub cover_front: bool,
+    #[prost(bool, tag = "4")]
+    pub cover_back: bool,
+    #[prost(bool, tag = "5")]
+    pub plug_front: bool,
+    #[prost(bool, tag = "6")]
+    pub plug_back: bool,
+    #[prost(bool, tag = "7")]
+    pub cap: bool,
+    #[prost(bool, tag = "8")]
+    pub fill: bool,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DrcSeveritySetting {
+    #[prost(enumeration = "DrcErrorType", tag = "1")]
+    pub rule_type: i32,
+    #[prost(enumeration = "super::common::types::RuleSeverity", tag = "2")]
+    pub severity: i32,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DrcExclusion {
+    #[prost(message, optional, tag = "1")]
+    pub marker: ::core::option::Option<super::common::types::RuleCheckerMarker>,
+    #[prost(string, tag = "2")]
+    pub comment: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CustomRuleDisallowSettings {
+    #[prost(enumeration = "CustomRuleDisallowType", repeated, tag = "1")]
+    pub types: ::prost::alloc::vec::Vec<i32>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CustomRuleConstraint {
+    #[prost(enumeration = "CustomRuleConstraintType", tag = "1")]
+    pub r#type: i32,
+    #[prost(string, optional, tag = "2")]
+    pub name: ::core::option::Option<::prost::alloc::string::String>,
+    /// grab bag of stuff; may be refactored to more specific messages later
+    #[prost(enumeration = "CustomRuleConstraintOption", repeated, tag = "100")]
+    pub options: ::prost::alloc::vec::Vec<i32>,
+    #[prost(oneof = "custom_rule_constraint::Value", tags = "3, 4, 5, 6")]
+    pub value: ::core::option::Option<custom_rule_constraint::Value>,
+}
+/// Nested message and enum types in `CustomRuleConstraint`.
+pub mod custom_rule_constraint {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Value {
+        /// nanometers, picoseconds, or unitless depending on constraint type
+        #[prost(message, tag = "3")]
+        Numeric(super::super::common::types::MinOptMax),
+        #[prost(message, tag = "4")]
+        Disallow(super::CustomRuleDisallowSettings),
+        #[prost(enumeration = "super::types::ZoneConnectionStyle", tag = "5")]
+        ZoneConnection(i32),
+        #[prost(string, tag = "6")]
+        AssertionExpression(::prost::alloc::string::String),
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CustomRule {
+    #[prost(string, tag = "1")]
+    pub condition: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag = "2")]
+    pub constraints: ::prost::alloc::vec::Vec<CustomRuleConstraint>,
+    #[prost(enumeration = "super::common::types::RuleSeverity", tag = "5")]
+    pub severity: i32,
+    #[prost(string, tag = "6")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "7")]
+    pub comments: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(oneof = "custom_rule::LayerCondition", tags = "3, 4")]
+    pub layer_condition: ::core::option::Option<custom_rule::LayerCondition>,
+}
+/// Nested message and enum types in `CustomRule`.
+pub mod custom_rule {
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum LayerCondition {
+        #[prost(enumeration = "super::types::BoardLayer", tag = "3")]
+        SingleLayer(i32),
+        #[prost(enumeration = "super::CustomRuleLayerMode", tag = "4")]
+        LayerMode(i32),
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BoardDesignRules {
+    #[prost(message, optional, tag = "1")]
+    pub constraints: ::core::option::Option<MinimumConstraints>,
+    #[prost(message, optional, tag = "2")]
+    pub predefined_sizes: ::core::option::Option<PredefinedSizes>,
+    #[prost(message, optional, tag = "3")]
+    pub solder_mask_paste: ::core::option::Option<SolderMaskPasteDefaults>,
+    #[prost(message, optional, tag = "4")]
+    pub teardrops: ::core::option::Option<TeardropDefaults>,
+    #[prost(message, optional, tag = "5")]
+    pub via_protection: ::core::option::Option<ViaProtectionDefaults>,
+    #[prost(message, repeated, tag = "6")]
+    pub severities: ::prost::alloc::vec::Vec<DrcSeveritySetting>,
+    #[prost(message, repeated, tag = "7")]
+    pub exclusions: ::prost::alloc::vec::Vec<DrcExclusion>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum BoardStackupLayerType {
@@ -184,6 +412,537 @@ impl BoardLayerClass {
             "BLC_COURTYARD" => Some(Self::BlcCourtyard),
             "BLC_FABRICATION" => Some(Self::BlcFabrication),
             "BLC_OTHER" => Some(Self::BlcOther),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum TeardropTarget {
+    TdtUnknown = 0,
+    TdtRound = 1,
+    TdtRect = 2,
+    TdtTrack = 3,
+}
+impl TeardropTarget {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::TdtUnknown => "TDT_UNKNOWN",
+            Self::TdtRound => "TDT_ROUND",
+            Self::TdtRect => "TDT_RECT",
+            Self::TdtTrack => "TDT_TRACK",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "TDT_UNKNOWN" => Some(Self::TdtUnknown),
+            "TDT_ROUND" => Some(Self::TdtRound),
+            "TDT_RECT" => Some(Self::TdtRect),
+            "TDT_TRACK" => Some(Self::TdtTrack),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum DrcErrorType {
+    DrcetUnknown = 0,
+    DrcetUnconnectedItems = 1,
+    DrcetShortingItems = 2,
+    DrcetAllowedItems = 3,
+    DrcetTextOnEdgecuts = 4,
+    DrcetClearance = 5,
+    DrcetCreepage = 6,
+    DrcetTracksCrossing = 7,
+    DrcetEdgeClearance = 8,
+    DrcetZonesIntersect = 9,
+    DrcetIsolatedCopper = 10,
+    DrcetStarvedThermal = 11,
+    DrcetDanglingVia = 12,
+    DrcetDanglingTrack = 13,
+    DrcetDrilledHolesTooClose = 14,
+    DrcetDrilledHolesColocated = 15,
+    DrcetHoleClearance = 16,
+    DrcetConnectionWidth = 17,
+    DrcetTrackWidth = 18,
+    DrcetTrackAngle = 19,
+    DrcetTrackSegmentLength = 20,
+    DrcetAnnularWidth = 21,
+    DrcetDrillOutOfRange = 22,
+    DrcetViaDiameter = 23,
+    DrcetPadstack = 24,
+    DrcetPadstackInvalid = 25,
+    DrcetMicroviaDrillOutOfRange = 26,
+    DrcetOverlappingFootprints = 27,
+    DrcetMissingCourtyard = 28,
+    DrcetMalformedCourtyard = 29,
+    DrcetPthInCourtyard = 30,
+    DrcetNpthInCourtyard = 31,
+    DrcetDisabledLayerItem = 32,
+    DrcetInvalidOutline = 33,
+    DrcetMissingFootprint = 34,
+    DrcetDuplicateFootprint = 35,
+    DrcetNetConflict = 36,
+    DrcetExtraFootprint = 37,
+    DrcetSchematicParity = 38,
+    DrcetSchematicFieldsParity = 39,
+    DrcetFootprintFilters = 40,
+    DrcetLibFootprintIssues = 41,
+    DrcetLibFootprintMismatch = 42,
+    DrcetUnresolvedVariable = 43,
+    DrcetAssertionFailure = 44,
+    DrcetGenericWarning = 45,
+    DrcetGenericError = 46,
+    DrcetCopperSliver = 47,
+    DrcetSilkClearance = 48,
+    DrcetSilkMaskClearance = 49,
+    DrcetSilkEdgeClearance = 50,
+    DrcetSoldermaskBridge = 51,
+    DrcetTextHeight = 52,
+    DrcetTextThickness = 53,
+    DrcetLengthOutOfRange = 54,
+    DrcetSkewOutOfRange = 55,
+    DrcetViaCountOutOfRange = 56,
+    DrcetDiffPairGapOutOfRange = 57,
+    DrcetDiffPairUncoupledLengthTooLong = 58,
+    DrcetFootprint = 59,
+    DrcetFootprintTypeMismatch = 60,
+    DrcetPadThWithNoHole = 61,
+    DrcetMirroredTextOnFrontLayer = 62,
+    DrcetNonmirroredTextOnBackLayer = 63,
+    DrcetMissingTuningProfile = 64,
+    DrcetTuningProfileImplicitRules = 65,
+    DrcetTrackOnPostMachinedLayer = 66,
+    DrcetTrackNotCenteredOnVia = 67,
+}
+impl DrcErrorType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::DrcetUnknown => "DRCET_UNKNOWN",
+            Self::DrcetUnconnectedItems => "DRCET_UNCONNECTED_ITEMS",
+            Self::DrcetShortingItems => "DRCET_SHORTING_ITEMS",
+            Self::DrcetAllowedItems => "DRCET_ALLOWED_ITEMS",
+            Self::DrcetTextOnEdgecuts => "DRCET_TEXT_ON_EDGECUTS",
+            Self::DrcetClearance => "DRCET_CLEARANCE",
+            Self::DrcetCreepage => "DRCET_CREEPAGE",
+            Self::DrcetTracksCrossing => "DRCET_TRACKS_CROSSING",
+            Self::DrcetEdgeClearance => "DRCET_EDGE_CLEARANCE",
+            Self::DrcetZonesIntersect => "DRCET_ZONES_INTERSECT",
+            Self::DrcetIsolatedCopper => "DRCET_ISOLATED_COPPER",
+            Self::DrcetStarvedThermal => "DRCET_STARVED_THERMAL",
+            Self::DrcetDanglingVia => "DRCET_DANGLING_VIA",
+            Self::DrcetDanglingTrack => "DRCET_DANGLING_TRACK",
+            Self::DrcetDrilledHolesTooClose => "DRCET_DRILLED_HOLES_TOO_CLOSE",
+            Self::DrcetDrilledHolesColocated => "DRCET_DRILLED_HOLES_COLOCATED",
+            Self::DrcetHoleClearance => "DRCET_HOLE_CLEARANCE",
+            Self::DrcetConnectionWidth => "DRCET_CONNECTION_WIDTH",
+            Self::DrcetTrackWidth => "DRCET_TRACK_WIDTH",
+            Self::DrcetTrackAngle => "DRCET_TRACK_ANGLE",
+            Self::DrcetTrackSegmentLength => "DRCET_TRACK_SEGMENT_LENGTH",
+            Self::DrcetAnnularWidth => "DRCET_ANNULAR_WIDTH",
+            Self::DrcetDrillOutOfRange => "DRCET_DRILL_OUT_OF_RANGE",
+            Self::DrcetViaDiameter => "DRCET_VIA_DIAMETER",
+            Self::DrcetPadstack => "DRCET_PADSTACK",
+            Self::DrcetPadstackInvalid => "DRCET_PADSTACK_INVALID",
+            Self::DrcetMicroviaDrillOutOfRange => "DRCET_MICROVIA_DRILL_OUT_OF_RANGE",
+            Self::DrcetOverlappingFootprints => "DRCET_OVERLAPPING_FOOTPRINTS",
+            Self::DrcetMissingCourtyard => "DRCET_MISSING_COURTYARD",
+            Self::DrcetMalformedCourtyard => "DRCET_MALFORMED_COURTYARD",
+            Self::DrcetPthInCourtyard => "DRCET_PTH_IN_COURTYARD",
+            Self::DrcetNpthInCourtyard => "DRCET_NPTH_IN_COURTYARD",
+            Self::DrcetDisabledLayerItem => "DRCET_DISABLED_LAYER_ITEM",
+            Self::DrcetInvalidOutline => "DRCET_INVALID_OUTLINE",
+            Self::DrcetMissingFootprint => "DRCET_MISSING_FOOTPRINT",
+            Self::DrcetDuplicateFootprint => "DRCET_DUPLICATE_FOOTPRINT",
+            Self::DrcetNetConflict => "DRCET_NET_CONFLICT",
+            Self::DrcetExtraFootprint => "DRCET_EXTRA_FOOTPRINT",
+            Self::DrcetSchematicParity => "DRCET_SCHEMATIC_PARITY",
+            Self::DrcetSchematicFieldsParity => "DRCET_SCHEMATIC_FIELDS_PARITY",
+            Self::DrcetFootprintFilters => "DRCET_FOOTPRINT_FILTERS",
+            Self::DrcetLibFootprintIssues => "DRCET_LIB_FOOTPRINT_ISSUES",
+            Self::DrcetLibFootprintMismatch => "DRCET_LIB_FOOTPRINT_MISMATCH",
+            Self::DrcetUnresolvedVariable => "DRCET_UNRESOLVED_VARIABLE",
+            Self::DrcetAssertionFailure => "DRCET_ASSERTION_FAILURE",
+            Self::DrcetGenericWarning => "DRCET_GENERIC_WARNING",
+            Self::DrcetGenericError => "DRCET_GENERIC_ERROR",
+            Self::DrcetCopperSliver => "DRCET_COPPER_SLIVER",
+            Self::DrcetSilkClearance => "DRCET_SILK_CLEARANCE",
+            Self::DrcetSilkMaskClearance => "DRCET_SILK_MASK_CLEARANCE",
+            Self::DrcetSilkEdgeClearance => "DRCET_SILK_EDGE_CLEARANCE",
+            Self::DrcetSoldermaskBridge => "DRCET_SOLDERMASK_BRIDGE",
+            Self::DrcetTextHeight => "DRCET_TEXT_HEIGHT",
+            Self::DrcetTextThickness => "DRCET_TEXT_THICKNESS",
+            Self::DrcetLengthOutOfRange => "DRCET_LENGTH_OUT_OF_RANGE",
+            Self::DrcetSkewOutOfRange => "DRCET_SKEW_OUT_OF_RANGE",
+            Self::DrcetViaCountOutOfRange => "DRCET_VIA_COUNT_OUT_OF_RANGE",
+            Self::DrcetDiffPairGapOutOfRange => "DRCET_DIFF_PAIR_GAP_OUT_OF_RANGE",
+            Self::DrcetDiffPairUncoupledLengthTooLong => {
+                "DRCET_DIFF_PAIR_UNCOUPLED_LENGTH_TOO_LONG"
+            }
+            Self::DrcetFootprint => "DRCET_FOOTPRINT",
+            Self::DrcetFootprintTypeMismatch => "DRCET_FOOTPRINT_TYPE_MISMATCH",
+            Self::DrcetPadThWithNoHole => "DRCET_PAD_TH_WITH_NO_HOLE",
+            Self::DrcetMirroredTextOnFrontLayer => "DRCET_MIRRORED_TEXT_ON_FRONT_LAYER",
+            Self::DrcetNonmirroredTextOnBackLayer => {
+                "DRCET_NONMIRRORED_TEXT_ON_BACK_LAYER"
+            }
+            Self::DrcetMissingTuningProfile => "DRCET_MISSING_TUNING_PROFILE",
+            Self::DrcetTuningProfileImplicitRules => {
+                "DRCET_TUNING_PROFILE_IMPLICIT_RULES"
+            }
+            Self::DrcetTrackOnPostMachinedLayer => "DRCET_TRACK_ON_POST_MACHINED_LAYER",
+            Self::DrcetTrackNotCenteredOnVia => "DRCET_TRACK_NOT_CENTERED_ON_VIA",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "DRCET_UNKNOWN" => Some(Self::DrcetUnknown),
+            "DRCET_UNCONNECTED_ITEMS" => Some(Self::DrcetUnconnectedItems),
+            "DRCET_SHORTING_ITEMS" => Some(Self::DrcetShortingItems),
+            "DRCET_ALLOWED_ITEMS" => Some(Self::DrcetAllowedItems),
+            "DRCET_TEXT_ON_EDGECUTS" => Some(Self::DrcetTextOnEdgecuts),
+            "DRCET_CLEARANCE" => Some(Self::DrcetClearance),
+            "DRCET_CREEPAGE" => Some(Self::DrcetCreepage),
+            "DRCET_TRACKS_CROSSING" => Some(Self::DrcetTracksCrossing),
+            "DRCET_EDGE_CLEARANCE" => Some(Self::DrcetEdgeClearance),
+            "DRCET_ZONES_INTERSECT" => Some(Self::DrcetZonesIntersect),
+            "DRCET_ISOLATED_COPPER" => Some(Self::DrcetIsolatedCopper),
+            "DRCET_STARVED_THERMAL" => Some(Self::DrcetStarvedThermal),
+            "DRCET_DANGLING_VIA" => Some(Self::DrcetDanglingVia),
+            "DRCET_DANGLING_TRACK" => Some(Self::DrcetDanglingTrack),
+            "DRCET_DRILLED_HOLES_TOO_CLOSE" => Some(Self::DrcetDrilledHolesTooClose),
+            "DRCET_DRILLED_HOLES_COLOCATED" => Some(Self::DrcetDrilledHolesColocated),
+            "DRCET_HOLE_CLEARANCE" => Some(Self::DrcetHoleClearance),
+            "DRCET_CONNECTION_WIDTH" => Some(Self::DrcetConnectionWidth),
+            "DRCET_TRACK_WIDTH" => Some(Self::DrcetTrackWidth),
+            "DRCET_TRACK_ANGLE" => Some(Self::DrcetTrackAngle),
+            "DRCET_TRACK_SEGMENT_LENGTH" => Some(Self::DrcetTrackSegmentLength),
+            "DRCET_ANNULAR_WIDTH" => Some(Self::DrcetAnnularWidth),
+            "DRCET_DRILL_OUT_OF_RANGE" => Some(Self::DrcetDrillOutOfRange),
+            "DRCET_VIA_DIAMETER" => Some(Self::DrcetViaDiameter),
+            "DRCET_PADSTACK" => Some(Self::DrcetPadstack),
+            "DRCET_PADSTACK_INVALID" => Some(Self::DrcetPadstackInvalid),
+            "DRCET_MICROVIA_DRILL_OUT_OF_RANGE" => {
+                Some(Self::DrcetMicroviaDrillOutOfRange)
+            }
+            "DRCET_OVERLAPPING_FOOTPRINTS" => Some(Self::DrcetOverlappingFootprints),
+            "DRCET_MISSING_COURTYARD" => Some(Self::DrcetMissingCourtyard),
+            "DRCET_MALFORMED_COURTYARD" => Some(Self::DrcetMalformedCourtyard),
+            "DRCET_PTH_IN_COURTYARD" => Some(Self::DrcetPthInCourtyard),
+            "DRCET_NPTH_IN_COURTYARD" => Some(Self::DrcetNpthInCourtyard),
+            "DRCET_DISABLED_LAYER_ITEM" => Some(Self::DrcetDisabledLayerItem),
+            "DRCET_INVALID_OUTLINE" => Some(Self::DrcetInvalidOutline),
+            "DRCET_MISSING_FOOTPRINT" => Some(Self::DrcetMissingFootprint),
+            "DRCET_DUPLICATE_FOOTPRINT" => Some(Self::DrcetDuplicateFootprint),
+            "DRCET_NET_CONFLICT" => Some(Self::DrcetNetConflict),
+            "DRCET_EXTRA_FOOTPRINT" => Some(Self::DrcetExtraFootprint),
+            "DRCET_SCHEMATIC_PARITY" => Some(Self::DrcetSchematicParity),
+            "DRCET_SCHEMATIC_FIELDS_PARITY" => Some(Self::DrcetSchematicFieldsParity),
+            "DRCET_FOOTPRINT_FILTERS" => Some(Self::DrcetFootprintFilters),
+            "DRCET_LIB_FOOTPRINT_ISSUES" => Some(Self::DrcetLibFootprintIssues),
+            "DRCET_LIB_FOOTPRINT_MISMATCH" => Some(Self::DrcetLibFootprintMismatch),
+            "DRCET_UNRESOLVED_VARIABLE" => Some(Self::DrcetUnresolvedVariable),
+            "DRCET_ASSERTION_FAILURE" => Some(Self::DrcetAssertionFailure),
+            "DRCET_GENERIC_WARNING" => Some(Self::DrcetGenericWarning),
+            "DRCET_GENERIC_ERROR" => Some(Self::DrcetGenericError),
+            "DRCET_COPPER_SLIVER" => Some(Self::DrcetCopperSliver),
+            "DRCET_SILK_CLEARANCE" => Some(Self::DrcetSilkClearance),
+            "DRCET_SILK_MASK_CLEARANCE" => Some(Self::DrcetSilkMaskClearance),
+            "DRCET_SILK_EDGE_CLEARANCE" => Some(Self::DrcetSilkEdgeClearance),
+            "DRCET_SOLDERMASK_BRIDGE" => Some(Self::DrcetSoldermaskBridge),
+            "DRCET_TEXT_HEIGHT" => Some(Self::DrcetTextHeight),
+            "DRCET_TEXT_THICKNESS" => Some(Self::DrcetTextThickness),
+            "DRCET_LENGTH_OUT_OF_RANGE" => Some(Self::DrcetLengthOutOfRange),
+            "DRCET_SKEW_OUT_OF_RANGE" => Some(Self::DrcetSkewOutOfRange),
+            "DRCET_VIA_COUNT_OUT_OF_RANGE" => Some(Self::DrcetViaCountOutOfRange),
+            "DRCET_DIFF_PAIR_GAP_OUT_OF_RANGE" => Some(Self::DrcetDiffPairGapOutOfRange),
+            "DRCET_DIFF_PAIR_UNCOUPLED_LENGTH_TOO_LONG" => {
+                Some(Self::DrcetDiffPairUncoupledLengthTooLong)
+            }
+            "DRCET_FOOTPRINT" => Some(Self::DrcetFootprint),
+            "DRCET_FOOTPRINT_TYPE_MISMATCH" => Some(Self::DrcetFootprintTypeMismatch),
+            "DRCET_PAD_TH_WITH_NO_HOLE" => Some(Self::DrcetPadThWithNoHole),
+            "DRCET_MIRRORED_TEXT_ON_FRONT_LAYER" => {
+                Some(Self::DrcetMirroredTextOnFrontLayer)
+            }
+            "DRCET_NONMIRRORED_TEXT_ON_BACK_LAYER" => {
+                Some(Self::DrcetNonmirroredTextOnBackLayer)
+            }
+            "DRCET_MISSING_TUNING_PROFILE" => Some(Self::DrcetMissingTuningProfile),
+            "DRCET_TUNING_PROFILE_IMPLICIT_RULES" => {
+                Some(Self::DrcetTuningProfileImplicitRules)
+            }
+            "DRCET_TRACK_ON_POST_MACHINED_LAYER" => {
+                Some(Self::DrcetTrackOnPostMachinedLayer)
+            }
+            "DRCET_TRACK_NOT_CENTERED_ON_VIA" => Some(Self::DrcetTrackNotCenteredOnVia),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum CustomRuleLayerMode {
+    CrlmUnknown = 0,
+    CrlmOuter = 1,
+    CrlmInner = 2,
+}
+impl CustomRuleLayerMode {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::CrlmUnknown => "CRLM_UNKNOWN",
+            Self::CrlmOuter => "CRLM_OUTER",
+            Self::CrlmInner => "CRLM_INNER",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CRLM_UNKNOWN" => Some(Self::CrlmUnknown),
+            "CRLM_OUTER" => Some(Self::CrlmOuter),
+            "CRLM_INNER" => Some(Self::CrlmInner),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum CustomRuleConstraintType {
+    CrctUnknown = 0,
+    CrctClearance = 1,
+    CrctCreepage = 2,
+    CrctHoleClearance = 3,
+    CrctHoleToHole = 4,
+    CrctEdgeClearance = 5,
+    CrctHoleSize = 6,
+    CrctCourtyardClearance = 7,
+    CrctSilkClearance = 8,
+    CrctTextHeight = 9,
+    CrctTextThickness = 10,
+    CrctTrackWidth = 11,
+    CrctTrackSegmentLength = 12,
+    CrctAnnularWidth = 13,
+    CrctZoneConnection = 14,
+    CrctThermalReliefGap = 15,
+    CrctThermalSpokeWidth = 16,
+    CrctMinResolvedSpokes = 17,
+    CrctSolderMaskExpansion = 18,
+    CrctSolderPasteAbsMargin = 19,
+    CrctSolderPasteRelMargin = 20,
+    CrctDisallow = 21,
+    CrctViaDiameter = 22,
+    CrctLength = 23,
+    CrctSkew = 24,
+    CrctDiffPairGap = 25,
+    CrctMaxUncoupled = 26,
+    CrctDiffPairIntraSkew = 27,
+    CrctViaCount = 28,
+    CrctPhysicalClearance = 29,
+    CrctPhysicalHoleClearance = 30,
+    CrctAssertion = 31,
+    CrctConnectionWidth = 32,
+    CrctTrackAngle = 33,
+    CrctViaDangling = 34,
+    CrctBridgedMask = 35,
+    CrctSolderMaskSliver = 36,
+    CrctNetChainLength = 37,
+    CrctNetChainStubLength = 38,
+    CrctNetChainReturnPath = 39,
+}
+impl CustomRuleConstraintType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::CrctUnknown => "CRCT_UNKNOWN",
+            Self::CrctClearance => "CRCT_CLEARANCE",
+            Self::CrctCreepage => "CRCT_CREEPAGE",
+            Self::CrctHoleClearance => "CRCT_HOLE_CLEARANCE",
+            Self::CrctHoleToHole => "CRCT_HOLE_TO_HOLE",
+            Self::CrctEdgeClearance => "CRCT_EDGE_CLEARANCE",
+            Self::CrctHoleSize => "CRCT_HOLE_SIZE",
+            Self::CrctCourtyardClearance => "CRCT_COURTYARD_CLEARANCE",
+            Self::CrctSilkClearance => "CRCT_SILK_CLEARANCE",
+            Self::CrctTextHeight => "CRCT_TEXT_HEIGHT",
+            Self::CrctTextThickness => "CRCT_TEXT_THICKNESS",
+            Self::CrctTrackWidth => "CRCT_TRACK_WIDTH",
+            Self::CrctTrackSegmentLength => "CRCT_TRACK_SEGMENT_LENGTH",
+            Self::CrctAnnularWidth => "CRCT_ANNULAR_WIDTH",
+            Self::CrctZoneConnection => "CRCT_ZONE_CONNECTION",
+            Self::CrctThermalReliefGap => "CRCT_THERMAL_RELIEF_GAP",
+            Self::CrctThermalSpokeWidth => "CRCT_THERMAL_SPOKE_WIDTH",
+            Self::CrctMinResolvedSpokes => "CRCT_MIN_RESOLVED_SPOKES",
+            Self::CrctSolderMaskExpansion => "CRCT_SOLDER_MASK_EXPANSION",
+            Self::CrctSolderPasteAbsMargin => "CRCT_SOLDER_PASTE_ABS_MARGIN",
+            Self::CrctSolderPasteRelMargin => "CRCT_SOLDER_PASTE_REL_MARGIN",
+            Self::CrctDisallow => "CRCT_DISALLOW",
+            Self::CrctViaDiameter => "CRCT_VIA_DIAMETER",
+            Self::CrctLength => "CRCT_LENGTH",
+            Self::CrctSkew => "CRCT_SKEW",
+            Self::CrctDiffPairGap => "CRCT_DIFF_PAIR_GAP",
+            Self::CrctMaxUncoupled => "CRCT_MAX_UNCOUPLED",
+            Self::CrctDiffPairIntraSkew => "CRCT_DIFF_PAIR_INTRA_SKEW",
+            Self::CrctViaCount => "CRCT_VIA_COUNT",
+            Self::CrctPhysicalClearance => "CRCT_PHYSICAL_CLEARANCE",
+            Self::CrctPhysicalHoleClearance => "CRCT_PHYSICAL_HOLE_CLEARANCE",
+            Self::CrctAssertion => "CRCT_ASSERTION",
+            Self::CrctConnectionWidth => "CRCT_CONNECTION_WIDTH",
+            Self::CrctTrackAngle => "CRCT_TRACK_ANGLE",
+            Self::CrctViaDangling => "CRCT_VIA_DANGLING",
+            Self::CrctBridgedMask => "CRCT_BRIDGED_MASK",
+            Self::CrctSolderMaskSliver => "CRCT_SOLDER_MASK_SLIVER",
+            Self::CrctNetChainLength => "CRCT_NET_CHAIN_LENGTH",
+            Self::CrctNetChainStubLength => "CRCT_NET_CHAIN_STUB_LENGTH",
+            Self::CrctNetChainReturnPath => "CRCT_NET_CHAIN_RETURN_PATH",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CRCT_UNKNOWN" => Some(Self::CrctUnknown),
+            "CRCT_CLEARANCE" => Some(Self::CrctClearance),
+            "CRCT_CREEPAGE" => Some(Self::CrctCreepage),
+            "CRCT_HOLE_CLEARANCE" => Some(Self::CrctHoleClearance),
+            "CRCT_HOLE_TO_HOLE" => Some(Self::CrctHoleToHole),
+            "CRCT_EDGE_CLEARANCE" => Some(Self::CrctEdgeClearance),
+            "CRCT_HOLE_SIZE" => Some(Self::CrctHoleSize),
+            "CRCT_COURTYARD_CLEARANCE" => Some(Self::CrctCourtyardClearance),
+            "CRCT_SILK_CLEARANCE" => Some(Self::CrctSilkClearance),
+            "CRCT_TEXT_HEIGHT" => Some(Self::CrctTextHeight),
+            "CRCT_TEXT_THICKNESS" => Some(Self::CrctTextThickness),
+            "CRCT_TRACK_WIDTH" => Some(Self::CrctTrackWidth),
+            "CRCT_TRACK_SEGMENT_LENGTH" => Some(Self::CrctTrackSegmentLength),
+            "CRCT_ANNULAR_WIDTH" => Some(Self::CrctAnnularWidth),
+            "CRCT_ZONE_CONNECTION" => Some(Self::CrctZoneConnection),
+            "CRCT_THERMAL_RELIEF_GAP" => Some(Self::CrctThermalReliefGap),
+            "CRCT_THERMAL_SPOKE_WIDTH" => Some(Self::CrctThermalSpokeWidth),
+            "CRCT_MIN_RESOLVED_SPOKES" => Some(Self::CrctMinResolvedSpokes),
+            "CRCT_SOLDER_MASK_EXPANSION" => Some(Self::CrctSolderMaskExpansion),
+            "CRCT_SOLDER_PASTE_ABS_MARGIN" => Some(Self::CrctSolderPasteAbsMargin),
+            "CRCT_SOLDER_PASTE_REL_MARGIN" => Some(Self::CrctSolderPasteRelMargin),
+            "CRCT_DISALLOW" => Some(Self::CrctDisallow),
+            "CRCT_VIA_DIAMETER" => Some(Self::CrctViaDiameter),
+            "CRCT_LENGTH" => Some(Self::CrctLength),
+            "CRCT_SKEW" => Some(Self::CrctSkew),
+            "CRCT_DIFF_PAIR_GAP" => Some(Self::CrctDiffPairGap),
+            "CRCT_MAX_UNCOUPLED" => Some(Self::CrctMaxUncoupled),
+            "CRCT_DIFF_PAIR_INTRA_SKEW" => Some(Self::CrctDiffPairIntraSkew),
+            "CRCT_VIA_COUNT" => Some(Self::CrctViaCount),
+            "CRCT_PHYSICAL_CLEARANCE" => Some(Self::CrctPhysicalClearance),
+            "CRCT_PHYSICAL_HOLE_CLEARANCE" => Some(Self::CrctPhysicalHoleClearance),
+            "CRCT_ASSERTION" => Some(Self::CrctAssertion),
+            "CRCT_CONNECTION_WIDTH" => Some(Self::CrctConnectionWidth),
+            "CRCT_TRACK_ANGLE" => Some(Self::CrctTrackAngle),
+            "CRCT_VIA_DANGLING" => Some(Self::CrctViaDangling),
+            "CRCT_BRIDGED_MASK" => Some(Self::CrctBridgedMask),
+            "CRCT_SOLDER_MASK_SLIVER" => Some(Self::CrctSolderMaskSliver),
+            "CRCT_NET_CHAIN_LENGTH" => Some(Self::CrctNetChainLength),
+            "CRCT_NET_CHAIN_STUB_LENGTH" => Some(Self::CrctNetChainStubLength),
+            "CRCT_NET_CHAIN_RETURN_PATH" => Some(Self::CrctNetChainReturnPath),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum CustomRuleConstraintOption {
+    CrcoUnknown = 0,
+    CrcoSkewWithinDiffPairs = 1,
+    CrcoSpaceDomain = 2,
+    CrcoTimeDomain = 3,
+}
+impl CustomRuleConstraintOption {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::CrcoUnknown => "CRCO_UNKNOWN",
+            Self::CrcoSkewWithinDiffPairs => "CRCO_SKEW_WITHIN_DIFF_PAIRS",
+            Self::CrcoSpaceDomain => "CRCO_SPACE_DOMAIN",
+            Self::CrcoTimeDomain => "CRCO_TIME_DOMAIN",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CRCO_UNKNOWN" => Some(Self::CrcoUnknown),
+            "CRCO_SKEW_WITHIN_DIFF_PAIRS" => Some(Self::CrcoSkewWithinDiffPairs),
+            "CRCO_SPACE_DOMAIN" => Some(Self::CrcoSpaceDomain),
+            "CRCO_TIME_DOMAIN" => Some(Self::CrcoTimeDomain),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum CustomRuleDisallowType {
+    CrdtUnknown = 0,
+    CrdtThroughVias = 1,
+    CrdtMicroVias = 2,
+    CrdtBlindVias = 3,
+    CrdtBuriedVias = 4,
+    CrdtTracks = 5,
+    CrdtPads = 6,
+    CrdtZones = 7,
+    CrdtTexts = 8,
+    CrdtGraphics = 9,
+    CrdtHoles = 10,
+    CrdtFootprints = 11,
+}
+impl CustomRuleDisallowType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::CrdtUnknown => "CRDT_UNKNOWN",
+            Self::CrdtThroughVias => "CRDT_THROUGH_VIAS",
+            Self::CrdtMicroVias => "CRDT_MICRO_VIAS",
+            Self::CrdtBlindVias => "CRDT_BLIND_VIAS",
+            Self::CrdtBuriedVias => "CRDT_BURIED_VIAS",
+            Self::CrdtTracks => "CRDT_TRACKS",
+            Self::CrdtPads => "CRDT_PADS",
+            Self::CrdtZones => "CRDT_ZONES",
+            Self::CrdtTexts => "CRDT_TEXTS",
+            Self::CrdtGraphics => "CRDT_GRAPHICS",
+            Self::CrdtHoles => "CRDT_HOLES",
+            Self::CrdtFootprints => "CRDT_FOOTPRINTS",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CRDT_UNKNOWN" => Some(Self::CrdtUnknown),
+            "CRDT_THROUGH_VIAS" => Some(Self::CrdtThroughVias),
+            "CRDT_MICRO_VIAS" => Some(Self::CrdtMicroVias),
+            "CRDT_BLIND_VIAS" => Some(Self::CrdtBlindVias),
+            "CRDT_BURIED_VIAS" => Some(Self::CrdtBuriedVias),
+            "CRDT_TRACKS" => Some(Self::CrdtTracks),
+            "CRDT_PADS" => Some(Self::CrdtPads),
+            "CRDT_ZONES" => Some(Self::CrdtZones),
+            "CRDT_TEXTS" => Some(Self::CrdtTexts),
+            "CRDT_GRAPHICS" => Some(Self::CrdtGraphics),
+            "CRDT_HOLES" => Some(Self::CrdtHoles),
+            "CRDT_FOOTPRINTS" => Some(Self::CrdtFootprints),
             _ => None,
         }
     }
