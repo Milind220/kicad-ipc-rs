@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1](https://github.com/Milind220/kicad-ipc-rs/compare/v0.5.0...v0.5.1) - 2026-05-25
+
+### Fixed
+
+- align board text creation with kicad-python ([#36](https://github.com/Milind220/kicad-ipc-rs/pull/36))
+
 ## [0.5.0](https://github.com/Milind220/kicad-ipc-rs/compare/v0.4.4...v0.5.0) - 2026-05-05
 
 ### Added
