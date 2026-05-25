@@ -35,7 +35,7 @@ RUSTFLAGS='-Awarnings' cargo run -q --features blocking --example selection_deep
 - Selection text dump item IDs (`get_selection_as_string().ids`)
 - Pad-level net rows for selected footprints (`get_pad_netlist`)
 - Net graph among selected references (`net -> refs`)
-- Net name to net code mapping (`get_nets`)
+- Net metadata lookup (`get_nets`) with net-name-first handling (codes treated as legacy)
 
 ## API Sequence (Bindings)
 
@@ -57,7 +57,8 @@ RUSTFLAGS='-Awarnings' cargo run -q --features blocking --example selection_deep
 
 Primary:
 
-- Query `get_items_by_net` with types:
+- Query `get_items_by_net` with net-name-deduped inputs (KiCad 10.0.1 treats names as authoritative).
+- Type filter:
   - `KOT_PCB_TRACE`
   - `KOT_PCB_VIA`
   - `KOT_PCB_ARC`
@@ -70,7 +71,7 @@ Fallback when `GetItemsByNet` is unsupported:
 - Query each type separately with `get_items_by_type_codes(vec![type_code])`
 - Filter returned items locally by `item.net.name in selected_net_names`
 
-## Known KiCad 10.0.0-rc1 Behavior Seen
+## Known KiCad 10.0.1 Behavior Seen
 
 - `kiapi.board.commands.GetItemsByNet` can return `AS_UNHANDLED`.
 - Script handles this and continues with fallback scan.

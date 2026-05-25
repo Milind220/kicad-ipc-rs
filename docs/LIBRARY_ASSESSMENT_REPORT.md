@@ -339,9 +339,9 @@ PR #23 quality is good. Changes are focused, functionally coherent, and backed b
 
 #### DR-2: Broken anchor in `validation.md`
 
-- `docs/book/src/validation.md:21` links to README anchor `#kicad-v1000-api-completion-matrix`
-- README heading is `## KiCad v10.0.0 API Reference` (`README.md:118`)
-- Anchor slug does not match current heading
+- `docs/book/src/validation.md` links to README anchor `#kicad-v1001-api-reference`
+- README heading is `## KiCad v10.0.1 API Reference`
+- Anchor slug matches current heading
 - Severity: Low (broken cross-reference)
 - **Status: RESOLVED** (commit 5d3bb4b)
 
@@ -410,12 +410,12 @@ Previously reported version drift has been fixed and is no longer an active risk
 
 Resolved evidence:
 
-- `README.md` async snippet → `0.4.4` ✓
-- `README.md` blocking snippet → `0.4.4` ✓
-- `docs/book/src/quickstart.md` async snippet → `0.4.4` ✓
-- `docs/book/src/quickstart.md` blocking snippet → `0.4.4` ✓
-- `Cargo.toml` crate version → `0.4.4` ✓
-- `CHANGELOG.md` includes `[0.4.4]` entry ✓
+- `README.md` async snippet → `0.5.0` ✓
+- `README.md` blocking snippet → `0.5.0` ✓
+- `docs/book/src/quickstart.md` async snippet → `0.5.0` ✓
+- `docs/book/src/quickstart.md` blocking snippet → `0.5.0` ✓
+- `Cargo.toml` crate version → `0.5.0` ✓
+- `CHANGELOG.md` includes `[0.5.0]` entry ✓
 
 Impact: The highest-friction onboarding mismatch from the initial report has been addressed.
 

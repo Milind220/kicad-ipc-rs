@@ -66,3 +66,13 @@ Selection API notes:
 - `get_selection_*` methods now take `type_codes: Vec<i32>` (`Vec::new()` means no filter).
 - `add_to_selection`, `remove_from_selection`, `clear_selection` return `SelectionMutationResult` (decoded items + summary).
 - `get_selection_as_string` returns `SelectionStringDump` (`ids` + `contents`).
+
+Net query notes (KiCad 10.0.1):
+
+- `get_items_by_net(...)` treats net names as authoritative.
+- Numeric net codes are carried for legacy compatibility but should not be used as the primary dedupe key.
+
+Breaking-change note (unreleased):
+
+- `TitleBlockInfo.comments` now preserves fixed `comment1..comment9` slot ordering (including internal empty slots) when round-tripping through `set_title_block_info` and `get_title_block_info`.
+- For this pre-1.0 crate, expect this behavior change to land in a new **minor** release (not a patch release).

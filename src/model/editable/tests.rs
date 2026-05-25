@@ -41,8 +41,11 @@ fn from_any_decodes_each_supported_type_url() {
             &board_types::ReferenceImage::default(),
             pcb_item_type_urls::REFERENCE_IMAGE,
         ),
+        pack(
+            &board_types::Barcode::default(),
+            pcb_item_type_urls::BARCODE,
+        ),
     ];
-
     for raw in supported {
         let item = EditablePcbItem::from_any(raw).expect("supported type should decode");
         assert_ne!(item.kind(), EditablePcbItemKind::Unknown);
@@ -132,7 +135,7 @@ fn id_works_for_track_group_and_zone() {
 }
 
 #[test]
-fn layer_set_for_track_zone_via_pad_group() {
+fn layer_set_for_track_zone_via_pad_group_reference_image_barcode() {
     let track = EditablePcbItem::from_any(pack(
         &board_types::Track {
             layer: 4,
@@ -163,6 +166,26 @@ fn layer_set_for_track_zone_via_pad_group() {
             .expect("pad should decode");
     assert_eq!(pad.layer_set(), LayerSet::Padstack);
 
+    let reference_image = EditablePcbItem::from_any(pack(
+        &board_types::ReferenceImage {
+            layer: 6,
+            ..Default::default()
+        },
+        pcb_item_type_urls::REFERENCE_IMAGE,
+    ))
+    .expect("reference image should decode");
+    assert_eq!(reference_image.layer_set(), LayerSet::Single(6));
+
+    let barcode = EditablePcbItem::from_any(pack(
+        &board_types::Barcode {
+            layer: 7,
+            ..Default::default()
+        },
+        pcb_item_type_urls::BARCODE,
+    ))
+    .expect("barcode should decode");
+    assert_eq!(barcode.layer_set(), LayerSet::Single(7));
+
     let group = EditablePcbItem::from_any(pack(
         &board_types::Group::default(),
         pcb_item_type_urls::GROUP,
@@ -170,9 +193,8 @@ fn layer_set_for_track_zone_via_pad_group() {
     .expect("group should decode");
     assert_eq!(group.layer_set(), LayerSet::None);
 }
-
 #[test]
-fn set_layer_id_success_for_track_text_and_error_for_via_group() {
+fn set_layer_id_success_for_track_text_reference_image_barcode_and_error_for_via_group() {
     let mut track = EditablePcbItem::from_any(pack(
         &board_types::Track::default(),
         pcb_item_type_urls::TRACK,
@@ -188,6 +210,26 @@ fn set_layer_id_success_for_track_text_and_error_for_via_group() {
     .expect("text should decode");
     text.set_layer_id(40).expect("text layer set should work");
     assert_eq!(text.layer_set(), LayerSet::Single(40));
+
+    let mut reference_image = EditablePcbItem::from_any(pack(
+        &board_types::ReferenceImage::default(),
+        pcb_item_type_urls::REFERENCE_IMAGE,
+    ))
+    .expect("reference image should decode");
+    reference_image
+        .set_layer_id(23)
+        .expect("reference image layer set should work");
+    assert_eq!(reference_image.layer_set(), LayerSet::Single(23));
+
+    let mut barcode = EditablePcbItem::from_any(pack(
+        &board_types::Barcode::default(),
+        pcb_item_type_urls::BARCODE,
+    ))
+    .expect("barcode should decode");
+    barcode
+        .set_layer_id(24)
+        .expect("barcode layer set should work");
+    assert_eq!(barcode.layer_set(), LayerSet::Single(24));
 
     let mut via =
         EditablePcbItem::from_any(pack(&board_types::Via::default(), pcb_item_type_urls::VIA))
@@ -250,6 +292,34 @@ fn group_item_new_any_has_correct_type_url_and_member_ids() {
     assert_eq!(decoded.name, "renamed");
     let members: Vec<String> = decoded.items.into_iter().map(|id| id.value).collect();
     assert_eq!(members, vec!["item-c".to_string()]);
+}
+
+#[test]
+fn id_works_for_reference_image_and_barcode() {
+    let reference_image = EditablePcbItem::from_any(pack(
+        &board_types::ReferenceImage {
+            id: Some(common_types::Kiid {
+                value: "ref-img-1".to_string(),
+            }),
+            ..Default::default()
+        },
+        pcb_item_type_urls::REFERENCE_IMAGE,
+    ))
+    .expect("reference image should decode");
+
+    let barcode = EditablePcbItem::from_any(pack(
+        &board_types::Barcode {
+            id: Some(common_types::Kiid {
+                value: "barcode-1".to_string(),
+            }),
+            ..Default::default()
+        },
+        pcb_item_type_urls::BARCODE,
+    ))
+    .expect("barcode should decode");
+
+    assert_eq!(reference_image.id(), Some("ref-img-1"));
+    assert_eq!(barcode.id(), Some("barcode-1"));
 }
 
 #[test]

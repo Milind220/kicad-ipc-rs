@@ -12,7 +12,7 @@
 
 ```toml
 [dependencies]
-kicad-ipc-rs = "0.4.4"
+kicad-ipc-rs = "0.5.0"
 tokio = { version = "1", features = ["macros", "rt"] }
 ```
 
@@ -39,7 +39,7 @@ async fn main() -> Result<(), kicad_ipc_rs::KiCadError> {
 
 ```toml
 [dependencies]
-kicad-ipc-rs = { version = "0.4.4", features = ["blocking"] }
+kicad-ipc-rs = { version = "0.5.0", features = ["blocking"] }
 ```
 
 ```rust,no_run

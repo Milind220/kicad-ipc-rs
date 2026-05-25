@@ -490,10 +490,12 @@ impl KiCadClientBlocking {
         fn get_all_pcb_items_raw(&self) -> Result<Vec<(PcbObjectTypeCode, Vec<Any>)>, KiCadError>;
         fn get_all_pcb_items_details(&self) -> Result<Vec<(PcbObjectTypeCode, Vec<SelectionItemDetail>)>, KiCadError>;
         fn get_all_pcb_items(&self) -> Result<Vec<(PcbObjectTypeCode, Vec<PcbItem>)>, KiCadError>;
-        fn get_items_by_net_raw(&self, type_codes: Vec<i32>, net_codes: Vec<i32>) -> Result<Vec<Any>, KiCadError>;
-        fn get_items_by_net(&self, type_codes: Vec<i32>, net_codes: Vec<i32>) -> Result<Vec<PcbItem>, KiCadError>;
+        fn get_items_by_net_raw(&self, type_codes: Vec<i32>, nets: Vec<BoardNet>) -> Result<Vec<Any>, KiCadError>;
+        fn get_items_by_net(&self, type_codes: Vec<i32>, nets: Vec<BoardNet>) -> Result<Vec<PcbItem>, KiCadError>;
         fn get_items_by_net_class_raw(&self, type_codes: Vec<i32>, net_classes: Vec<String>) -> Result<Vec<Any>, KiCadError>;
         fn get_items_by_net_class(&self, type_codes: Vec<i32>, net_classes: Vec<String>) -> Result<Vec<PcbItem>, KiCadError>;
+        fn get_connected_items_raw(&self, item_ids: Vec<String>, type_codes: Vec<i32>) -> Result<Vec<Any>, KiCadError>;
+        fn get_connected_items(&self, item_ids: Vec<String>, type_codes: Vec<i32>) -> Result<Vec<PcbItem>, KiCadError>;
         fn get_netclass_for_nets_raw(&self, nets: Vec<BoardNet>) -> Result<Any, KiCadError>;
         fn get_netclass_for_nets(&self, nets: Vec<BoardNet>) -> Result<Vec<NetClassForNetEntry>, KiCadError>;
         fn refill_zones(&self, zone_ids: Vec<String>) -> Result<(), KiCadError>;
@@ -514,6 +516,8 @@ impl KiCadClientBlocking {
         fn interactive_move_items_raw(&self, item_ids: Vec<String>) -> Result<Any, KiCadError>;
         fn interactive_move_items(&self, item_ids: Vec<String>) -> Result<(), KiCadError>;
         fn get_title_block_info(&self) -> Result<TitleBlockInfo, KiCadError>;
+        fn set_title_block_info_raw(&self, title_block: TitleBlockInfo) -> Result<Any, KiCadError>;
+        fn set_title_block_info(&self, title_block: TitleBlockInfo) -> Result<(), KiCadError>;
         fn save_document_raw(&self) -> Result<Any, KiCadError>;
         fn save_document(&self) -> Result<(), KiCadError>;
         fn revert_document_raw(&self) -> Result<Any, KiCadError>;

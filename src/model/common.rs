@@ -322,7 +322,11 @@ pub struct TitleBlockInfo {
     pub revision: String,
     /// Company field.
     pub company: String,
-    /// Non-empty comment fields.
+    /// Comment slot values in `comment1..comment9` order.
+    ///
+    /// Internal empty gaps are preserved (`["A", "", "C"]` maps to
+    /// comment1/comment2/comment3), while trailing empty slots may be trimmed
+    /// from this public vector representation.
     pub comments: Vec<String>,
 }
 
