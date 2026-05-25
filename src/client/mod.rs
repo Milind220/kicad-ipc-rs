@@ -370,10 +370,26 @@ impl KiCadClient {
     pub fn socket_uri(&self) -> &str {
         &self.inner.socket_uri
     }
+
+    /// Sends a raw protobuf `Any` command and returns the raw response payload.
+    ///
+    /// This is an escape hatch for commands not yet wrapped by typed methods.
+    pub async fn send_raw_command(
+        &self,
+        command: prost_types::Any,
+    ) -> Result<prost_types::Any, KiCadError> {
+        let command_type_url = command.type_url.clone();
+        let response = self.send_command(command).await?;
+        response.message.ok_or(KiCadError::MissingPayload {
+            expected_type_url: format!("response payload for `{command_type_url}`"),
+        })
+    }
+
     pub(crate) async fn send_command(
         &self,
         command: prost_types::Any,
     ) -> Result<crate::proto::kiapi::common::ApiResponse, KiCadError> {
+        let command_type_url = command.type_url.clone();
         let token = self
             .inner
             .token
@@ -387,7 +403,17 @@ impl KiCadClient {
         let response = envelope::decode_response(&response_bytes)?;
 
         if let Some(err) = envelope::status_error(&response) {
-            return Err(err);
+            return Err(match err {
+                KiCadError::ApiStatus { code, message } => KiCadError::ApiStatus {
+                    code,
+                    message: if message.is_empty() {
+                        format!("command `{command_type_url}` failed")
+                    } else {
+                        format!("{message} (command `{command_type_url}`)")
+                    },
+                },
+                other => other,
+            });
         }
 
         if token.is_empty() {

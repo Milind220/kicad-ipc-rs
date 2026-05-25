@@ -116,7 +116,7 @@ async fn main() -> Result<(), kicad_ipc_rs::KiCadError> {
     
     // Get all footprints
     let footprints = client.get_items_by_type_codes(vec![
-        PcbObjectTypeCode::new_footprint()
+        PcbObjectTypeCode::new_footprint().code
     ]).await?;
     
     let mut by_lib: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
@@ -325,7 +325,7 @@ fn main() -> Result<(), kicad_ipc_rs::KiCadError> {
     
     // Get all tracks
     let tracks = client.get_items_by_type_codes(vec![
-        kicad_ipc_rs::PcbObjectTypeCode::new_trace()
+        kicad_ipc_rs::PcbObjectTypeCode::new_trace().code
     ])?;
     
     // Select first 5 tracks
@@ -366,7 +366,7 @@ cargo run --features blocking --bin kicad-ipc-cli -- version
 # Board queries
 cargo run --features blocking --bin kicad-ipc-cli -- board-open
 cargo run --features blocking --bin kicad-ipc-cli -- nets
-cargo run --features blocking --bin kicad-ipc-cli -- pcb-types
+cargo run --features blocking --bin kicad-ipc-cli -- types-pcb
 
 # Selection
 cargo run --features blocking --bin kicad-ipc-cli -- selection-summary

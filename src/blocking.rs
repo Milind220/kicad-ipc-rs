@@ -425,6 +425,7 @@ impl KiCadClientBlocking {
     }
 
     blocking_methods! {
+        fn send_raw_command(&self, command: Any) -> Result<Any, KiCadError>;
         fn ping(&self) -> Result<(), KiCadError>;
         fn refresh_editor(&self, frame: EditorFrameType) -> Result<(), KiCadError>;
         fn get_version(&self) -> Result<VersionInfo, KiCadError>;
@@ -450,6 +451,8 @@ impl KiCadClientBlocking {
         fn create_items_raw(&self, items: Vec<Any>, container_id: Option<String>) -> Result<Any, KiCadError>;
         fn create_items(&self, items: Vec<Any>, container_id: Option<String>) -> Result<Vec<Any>, KiCadError>;
         fn create_editable_items(&self, items: Vec<EditablePcbItem>, container_id: Option<String>) -> Result<Vec<EditablePcbItem>, KiCadError>;
+        fn create_board_text(&self, spec: BoardTextSpec) -> Result<PcbBoardText, KiCadError>;
+        fn create_board_texts(&self, specs: Vec<BoardTextSpec>) -> Result<Vec<PcbBoardText>, KiCadError>;
         fn update_items_raw(&self, items: Vec<Any>) -> Result<Any, KiCadError>;
         fn update_items(&self, items: Vec<Any>) -> Result<Vec<Any>, KiCadError>;
         fn update_editable_items(&self, items: Vec<EditablePcbItem>) -> Result<Vec<EditablePcbItem>, KiCadError>;

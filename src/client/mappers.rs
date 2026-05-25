@@ -6,6 +6,7 @@ use crate::envelope;
 use crate::error::KiCadError;
 use crate::model::board::*;
 use crate::model::common::*;
+use crate::pcb_item_type_urls;
 use crate::proto::kiapi::board as board_proto;
 use crate::proto::kiapi::board::commands as board_commands;
 use crate::proto::kiapi::board::types as board_types;
@@ -122,6 +123,31 @@ pub(crate) fn text_object_spec_to_proto(text: TextObjectSpec) -> common_commands
         }
     };
     common_commands::TextOrTextBox { inner: Some(inner) }
+}
+
+pub(crate) fn item_lock_state_to_proto(value: ItemLockState) -> i32 {
+    match value {
+        ItemLockState::Unlocked => common_types::LockedState::LsUnlocked as i32,
+        ItemLockState::Locked => common_types::LockedState::LsLocked as i32,
+        ItemLockState::Unknown(value) => value,
+    }
+}
+
+pub(crate) fn board_text_spec_to_proto(spec: BoardTextSpec) -> board_types::BoardText {
+    board_types::BoardText {
+        id: spec.id.map(|value| common_types::Kiid { value }),
+        text: Some(text_spec_to_proto(spec.text)),
+        layer: spec.layer_id,
+        knockout: spec.knockout,
+        locked: item_lock_state_to_proto(spec.locked),
+    }
+}
+
+pub(crate) fn board_text_spec_to_any(spec: BoardTextSpec) -> prost_types::Any {
+    envelope::pack_any(
+        &board_text_spec_to_proto(spec),
+        pcb_item_type_urls::BOARD_TEXT,
+    )
 }
 
 pub(crate) fn map_text_horizontal_alignment_from_proto(value: i32) -> TextHorizontalAlignment {

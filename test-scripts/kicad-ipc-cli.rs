@@ -6,10 +6,11 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use kicad_ipc_rs::{
-    BoardFlipMode, BoardOriginKind, CommitAction, CommitSession, DocumentType, DrcSeverity,
-    EditorFrameType, InactiveLayerDisplayMode, KiCadClientBlocking, KiCadError, MapMergeMode,
-    NetColorDisplayMode, PadstackPresenceState, PcbObjectTypeCode, RatsnestDisplayMode,
-    TextObjectSpec, TextShapeGeometry, TextSpec, Vector2Nm,
+    BoardFlipMode, BoardLayerInfo, BoardOriginKind, BoardTextSpec, CommitAction, CommitSession,
+    DocumentType, DrcSeverity, EditorFrameType, InactiveLayerDisplayMode, ItemLockState,
+    KiCadClientBlocking, KiCadError, MapMergeMode, NetColorDisplayMode, PadstackPresenceState,
+    PcbObjectTypeCode, RatsnestDisplayMode, TextAttributesSpec, TextHorizontalAlignment,
+    TextObjectSpec, TextShapeGeometry, TextSpec, TextVerticalAlignment, Vector2Nm,
 };
 
 const REPORT_MAX_PAD_NET_ROWS: usize = 2_000;
@@ -111,6 +112,9 @@ enum Command {
     CreateItems {
         items: Vec<prost_types::Any>,
         container_id: Option<String>,
+    },
+    CreateBoardText {
+        spec: BoardTextSpec,
     },
     UpdateItems {
         items: Vec<prost_types::Any>,
@@ -564,6 +568,14 @@ fn run() -> Result<(), KiCadError> {
                 );
             }
         }
+        Command::CreateBoardText { spec } => {
+            let created = client.create_board_text(spec)?;
+            let layer_name = BoardLayerInfo::canonical_name_for_id(created.layer.id)
+                .unwrap_or_else(|| created.layer.name.clone());
+            println!("created_text_id={}", created.id.as_deref().unwrap_or("-"));
+            println!("layer_id={} layer_name={}", created.layer.id, layer_name);
+            println!("text={}", created.text.as_deref().unwrap_or(""));
+        }
         Command::UpdateItems { items } => {
             let updated = client.update_items(items)?;
             println!("updated_item_count={}", updated.len());
@@ -728,41 +740,31 @@ fn run() -> Result<(), KiCadError> {
             }
         }
         Command::ItemsRawAllPcb { include_debug } => {
-            for object_type in kicad_ipc_rs::KiCadClient::pcb_object_type_codes() {
-                match client.get_items_raw_by_type_codes(vec![object_type.code]) {
-                    Ok(items) => {
+            for (object_type, items) in client.get_all_pcb_items_raw()? {
+                println!(
+                    "type_id={} type_name={} item_count={}",
+                    object_type.code,
+                    object_type.name,
+                    items.len()
+                );
+                for (index, item) in items.iter().enumerate() {
+                    if include_debug {
+                        let debug = kicad_ipc_rs::KiCadClient::debug_any_item(item)?
+                            .replace('\n', "\\n")
+                            .replace('\t', " ");
                         println!(
-                            "type_id={} type_name={} item_count={}",
-                            object_type.code,
-                            object_type.name,
-                            items.len()
+                            "  [{index}] type_url={} raw_len={} raw_hex={} debug={}",
+                            item.type_url,
+                            item.value.len(),
+                            bytes_to_hex(&item.value),
+                            debug
                         );
-                        for (index, item) in items.iter().enumerate() {
-                            if include_debug {
-                                let debug = kicad_ipc_rs::KiCadClient::debug_any_item(item)?
-                                    .replace('\n', "\\n")
-                                    .replace('\t', " ");
-                                println!(
-                                    "  [{index}] type_url={} raw_len={} raw_hex={} debug={}",
-                                    item.type_url,
-                                    item.value.len(),
-                                    bytes_to_hex(&item.value),
-                                    debug
-                                );
-                            } else {
-                                println!(
-                                    "  [{index}] type_url={} raw_len={} raw_hex={}",
-                                    item.type_url,
-                                    item.value.len(),
-                                    bytes_to_hex(&item.value)
-                                );
-                            }
-                        }
-                    }
-                    Err(err) => {
+                    } else {
                         println!(
-                            "type_id={} type_name={} error={}",
-                            object_type.code, object_type.name, err
+                            "  [{index}] type_url={} raw_len={} raw_hex={}",
+                            item.type_url,
+                            item.value.len(),
+                            bytes_to_hex(&item.value)
                         );
                     }
                 }
@@ -1548,6 +1550,126 @@ fn parse_args_from(mut args: Vec<String>) -> Result<(CliConfig, Command), KiCadE
                 container_id,
             }
         }
+        "create-board-text" => {
+            let mut text = None;
+            let mut x_nm = None;
+            let mut y_nm = None;
+            let mut layer_id = BoardLayerInfo::id_from_name("F.SilkS")
+                .expect("F.SilkS should be a known KiCad layer");
+            let mut size_nm = 1_500_000_i64;
+            let mut stroke_width_nm = 150_000_i64;
+            let mut knockout = false;
+            let mut locked = ItemLockState::Unlocked;
+            let mut i = 1;
+            while i < args.len() {
+                match args[i].as_str() {
+                    "--text" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for create-board-text --text".to_string(),
+                        })?;
+                        text = Some(value.clone());
+                        i += 2;
+                    }
+                    "--x-nm" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for create-board-text --x-nm".to_string(),
+                        })?;
+                        x_nm = Some(parse_i64_arg(value, "create-board-text --x-nm")?);
+                        i += 2;
+                    }
+                    "--y-nm" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for create-board-text --y-nm".to_string(),
+                        })?;
+                        y_nm = Some(parse_i64_arg(value, "create-board-text --y-nm")?);
+                        i += 2;
+                    }
+                    "--x-mm" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for create-board-text --x-mm".to_string(),
+                        })?;
+                        x_nm = Some(parse_mm_to_nm(value, "create-board-text --x-mm")?);
+                        i += 2;
+                    }
+                    "--y-mm" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for create-board-text --y-mm".to_string(),
+                        })?;
+                        y_nm = Some(parse_mm_to_nm(value, "create-board-text --y-mm")?);
+                        i += 2;
+                    }
+                    "--layer" | "--layer-id" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: format!("missing value for create-board-text {}", args[i]),
+                        })?;
+                        layer_id = BoardLayerInfo::id_from_name(value).ok_or_else(|| {
+                            KiCadError::Config {
+                                reason: format!(
+                                    "invalid create-board-text layer `{value}`; use e.g. F.SilkS, BL_F_SilkS, or 40"
+                                ),
+                            }
+                        })?;
+                        i += 2;
+                    }
+                    "--size-mm" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: "missing value for create-board-text --size-mm".to_string(),
+                        })?;
+                        size_nm = parse_mm_to_nm(value, "create-board-text --size-mm")?;
+                        i += 2;
+                    }
+                    "--stroke-width-mm" | "--thickness-mm" => {
+                        let value = args.get(i + 1).ok_or_else(|| KiCadError::Config {
+                            reason: format!("missing value for create-board-text {}", args[i]),
+                        })?;
+                        stroke_width_nm =
+                            parse_mm_to_nm(value, "create-board-text --stroke-width-mm")?;
+                        i += 2;
+                    }
+                    "--knockout" => {
+                        knockout = true;
+                        i += 1;
+                    }
+                    "--locked" => {
+                        locked = ItemLockState::Locked;
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
+            }
+
+            let attributes = TextAttributesSpec {
+                horizontal_alignment: TextHorizontalAlignment::Center,
+                vertical_alignment: TextVerticalAlignment::Center,
+                line_spacing: Some(1.0),
+                stroke_width_nm: Some(stroke_width_nm),
+                size_nm: Some(Vector2Nm {
+                    x_nm: size_nm,
+                    y_nm: size_nm,
+                }),
+                ..TextAttributesSpec::default()
+            };
+            let mut spec = BoardTextSpec::new(
+                text.ok_or_else(|| KiCadError::Config {
+                    reason: "create-board-text requires `--text <value>`".to_string(),
+                })?,
+                Vector2Nm {
+                    x_nm: x_nm.ok_or_else(|| KiCadError::Config {
+                        reason: "create-board-text requires `--x-mm <value>` or `--x-nm <value>`"
+                            .to_string(),
+                    })?,
+                    y_nm: y_nm.ok_or_else(|| KiCadError::Config {
+                        reason: "create-board-text requires `--y-mm <value>` or `--y-nm <value>`"
+                            .to_string(),
+                    })?,
+                },
+                layer_id,
+                Some(attributes),
+            );
+            spec.knockout = knockout;
+            spec.locked = locked;
+            Command::CreateBoardText { spec }
+        }
         "update-items" => {
             let mut items = Vec::new();
             let mut i = 1;
@@ -2090,6 +2212,24 @@ fn parse_drc_severity(value: &str) -> Result<DrcSeverity, String> {
     }
 }
 
+fn parse_i64_arg(value: &str, context: &str) -> Result<i64, KiCadError> {
+    value.parse::<i64>().map_err(|err| KiCadError::Config {
+        reason: format!("invalid {context} `{value}`: {err}"),
+    })
+}
+
+fn parse_mm_to_nm(value: &str, context: &str) -> Result<i64, KiCadError> {
+    let mm = value.parse::<f64>().map_err(|err| KiCadError::Config {
+        reason: format!("invalid {context} `{value}`: {err}"),
+    })?;
+    if !mm.is_finite() {
+        return Err(KiCadError::Config {
+            reason: format!("invalid {context} `{value}`: value must be finite"),
+        });
+    }
+    Ok((mm * 1_000_000.0).round() as i64)
+}
+
 fn default_config() -> CliConfig {
     CliConfig {
         socket: None,
@@ -2186,6 +2326,8 @@ COMMANDS:
   run-action --action <name>   Run a raw KiCad tool action
   create-items --item <type_url>=<hex> ... [--container-id <uuid>]
                                Create raw Any payload items in current board document
+  create-board-text --text <value> --x-mm <mm> --y-mm <mm> [--layer F.SilkS] [--size-mm 1.5] [--stroke-width-mm 0.15]
+                               Create board text through typed CreateItems (default layer: F.SilkS)
   update-items --item <type_url>=<hex> ...
                                Update raw Any payload items in current board document
   delete-items --id <uuid> ...
@@ -2442,50 +2584,43 @@ fn build_board_read_report_markdown(client: &KiCadClientBlocking) -> Result<Stri
 
     out.push_str("## PCB Item Coverage (All KOT_PCB_* Types)\n\n");
     let mut missing_types: Vec<PcbObjectTypeCode> = Vec::new();
-    for object_type in kicad_ipc_rs::KiCadClient::pcb_object_type_codes() {
+    for (object_type, items) in client.get_all_pcb_items_raw()? {
         out.push_str(&format!(
             "### {} ({})\n\n",
             object_type.name, object_type.code
         ));
-        match client.get_items_raw_by_type_codes(vec![object_type.code]) {
-            Ok(items) => {
-                if items.is_empty() {
-                    missing_types.push(*object_type);
-                }
-                out.push_str(&format!("- status: ok\n- count: {}\n\n", items.len()));
+        if items.is_empty() {
+            missing_types.push(object_type);
+        }
+        out.push_str(&format!("- status: ok\n- count: {}\n\n", items.len()));
 
-                for (index, item) in items
-                    .iter()
-                    .take(REPORT_MAX_ITEM_DEBUG_ROWS_PER_TYPE)
-                    .enumerate()
-                {
-                    let mut debug = kicad_ipc_rs::KiCadClient::debug_any_item(item)?;
-                    if debug.len() > REPORT_MAX_ITEM_DEBUG_CHARS {
-                        debug.truncate(REPORT_MAX_ITEM_DEBUG_CHARS);
-                        debug.push_str("\n...<truncated; use items-raw CLI for full payload>");
-                    }
-                    out.push_str(&format!(
-                        "#### item {}\n\n- type_url: `{}`\n- raw_len: `{}`\n\n",
-                        index,
-                        item.type_url,
-                        item.value.len()
-                    ));
-                    out.push_str("```text\n");
-                    out.push_str(&debug);
-                    out.push_str("\n```\n\n");
-                }
-                if items.len() > REPORT_MAX_ITEM_DEBUG_ROWS_PER_TYPE {
-                    out.push_str(&format!(
-                        "- ... omitted {} additional item debug rows for {} (use `items-raw --type-id {}` for full output)\n\n",
-                        items.len() - REPORT_MAX_ITEM_DEBUG_ROWS_PER_TYPE,
-                        object_type.name,
-                        object_type.code
-                    ));
-                }
+        for (index, item) in items
+            .iter()
+            .take(REPORT_MAX_ITEM_DEBUG_ROWS_PER_TYPE)
+            .enumerate()
+        {
+            let mut debug = kicad_ipc_rs::KiCadClient::debug_any_item(item)?;
+            if debug.len() > REPORT_MAX_ITEM_DEBUG_CHARS {
+                debug.truncate(REPORT_MAX_ITEM_DEBUG_CHARS);
+                debug.push_str("\n...<truncated; use items-raw CLI for full payload>");
             }
-            Err(err) => {
-                out.push_str(&format!("- status: error\n- error: `{}`\n\n", err));
-            }
+            out.push_str(&format!(
+                "#### item {}\n\n- type_url: `{}`\n- raw_len: `{}`\n\n",
+                index,
+                item.type_url,
+                item.value.len()
+            ));
+            out.push_str("```text\n");
+            out.push_str(&debug);
+            out.push_str("\n```\n\n");
+        }
+        if items.len() > REPORT_MAX_ITEM_DEBUG_ROWS_PER_TYPE {
+            out.push_str(&format!(
+                "- ... omitted {} additional item debug rows for {} (use `items-raw --type-id {}` for full output)\n\n",
+                items.len() - REPORT_MAX_ITEM_DEBUG_ROWS_PER_TYPE,
+                object_type.name,
+                object_type.code
+            ));
         }
     }
 
@@ -3051,7 +3186,7 @@ mod tests {
         let (_, command) = parse_args_from(vec![
             "create-items".to_string(),
             "--item".to_string(),
-            "type.googleapis.com/kiapi.board.types.Text=0a00".to_string(),
+            "type.googleapis.com/kiapi.board.types.BoardText=0a00".to_string(),
             "--container-id".to_string(),
             "container-1".to_string(),
         ])
@@ -3065,10 +3200,48 @@ mod tests {
                 assert_eq!(items.len(), 1);
                 assert_eq!(
                     items[0].type_url,
-                    "type.googleapis.com/kiapi.board.types.Text"
+                    "type.googleapis.com/kiapi.board.types.BoardText"
                 );
                 assert_eq!(items[0].value, vec![0x0a, 0x00]);
                 assert_eq!(container_id.as_deref(), Some("container-1"));
+            }
+            other => panic!("unexpected command variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_args_parses_create_board_text() {
+        let (_, command) = parse_args_from(vec![
+            "create-board-text".to_string(),
+            "--text".to_string(),
+            "IPC OK".to_string(),
+            "--x-mm".to_string(),
+            "186".to_string(),
+            "--y-mm".to_string(),
+            "90.5".to_string(),
+            "--layer".to_string(),
+            "F.SilkS".to_string(),
+            "--size-mm".to_string(),
+            "1.5".to_string(),
+            "--stroke-width-mm".to_string(),
+            "0.15".to_string(),
+        ])
+        .expect("create-board-text args should parse");
+
+        match command {
+            Command::CreateBoardText { spec } => {
+                assert_eq!(spec.text.text, "IPC OK");
+                assert_eq!(
+                    spec.text.position_nm.map(|point| (point.x_nm, point.y_nm)),
+                    Some((186_000_000, 90_500_000))
+                );
+                assert_eq!(spec.layer_id, 40);
+                assert_eq!(
+                    spec.text
+                        .attributes
+                        .and_then(|attributes| attributes.stroke_width_nm),
+                    Some(150_000)
+                );
             }
             other => panic!("unexpected command variant: {other:?}"),
         }
@@ -3079,7 +3252,7 @@ mod tests {
         let (_, command) = parse_args_from(vec![
             "update-items".to_string(),
             "--item".to_string(),
-            "type.googleapis.com/kiapi.board.types.Text=0a00".to_string(),
+            "type.googleapis.com/kiapi.board.types.BoardText=0a00".to_string(),
         ])
         .expect("update-items args should parse");
 
@@ -3088,7 +3261,7 @@ mod tests {
                 assert_eq!(items.len(), 1);
                 assert_eq!(
                     items[0].type_url,
-                    "type.googleapis.com/kiapi.board.types.Text"
+                    "type.googleapis.com/kiapi.board.types.BoardText"
                 );
                 assert_eq!(items[0].value, vec![0x0a, 0x00]);
             }

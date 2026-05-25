@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use crate::proto::kiapi::board::types::BoardLayer;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// KiCad net descriptor.
 pub struct BoardNet {
@@ -16,6 +18,42 @@ pub struct BoardLayerInfo {
     pub id: i32,
     /// Human-readable layer name.
     pub name: String,
+}
+
+impl BoardLayerInfo {
+    /// Returns KiCad's canonical file/UI layer name for a layer id.
+    ///
+    /// Examples include `F.Cu`, `B.Cu`, `F.SilkS`, and `Edge.Cuts`.
+    pub fn canonical_name_for_id(id: i32) -> Option<String> {
+        let layer = BoardLayer::try_from(id).ok()?;
+        let proto_name = layer.as_str_name();
+        match proto_name {
+            "BL_UNKNOWN" | "BL_UNDEFINED" | "BL_UNSELECTED" => None,
+            _ => proto_name
+                .strip_prefix("BL_")
+                .map(|name| name.replace('_', ".")),
+        }
+    }
+
+    /// Resolves a canonical KiCad layer name, proto enum name, or numeric id.
+    ///
+    /// Accepts values like `F.SilkS`, `BL_F_SilkS`, and `40`.
+    pub fn id_from_name(value: &str) -> Option<i32> {
+        let trimmed = value.trim();
+        if let Ok(id) = trimmed.parse::<i32>() {
+            return BoardLayer::try_from(id).ok().map(|_| id);
+        }
+
+        if let Some(layer) = BoardLayer::from_str_name(trimmed) {
+            return Some(layer as i32);
+        }
+
+        (0..=128).find(|id| {
+            Self::canonical_name_for_id(*id)
+                .as_deref()
+                .is_some_and(|name| name == trimmed)
+        })
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -393,6 +431,63 @@ pub enum ItemLockState {
     Unknown(i32),
 }
 
+impl ItemLockState {
+    /// Returns true when this lock state is locked.
+    pub fn is_locked(self) -> bool {
+        matches!(self, Self::Locked)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+/// Specification for creating a board text item through `CreateItems`.
+///
+/// This mirrors the official `kicad-python` `BoardText` wrapper: leave `id`
+/// unset to let KiCad assign the KIID in the create response.
+pub struct BoardTextSpec {
+    /// Optional KIID to request. Leave `None` for KiCad-assigned IDs.
+    pub id: Option<String>,
+    /// Text payload, position, attributes, and hyperlink.
+    pub text: crate::model::common::TextSpec,
+    /// KiCad board layer id, for example `40` for `F.SilkS`.
+    pub layer_id: i32,
+    /// Whether to enable knockout rendering.
+    pub knockout: bool,
+    /// Requested item lock state.
+    pub locked: ItemLockState,
+}
+
+impl BoardTextSpec {
+    /// Creates a board text specification on the given layer.
+    pub fn new(
+        text: impl Into<String>,
+        position_nm: Vector2Nm,
+        layer_id: i32,
+        attributes: Option<crate::model::common::TextAttributesSpec>,
+    ) -> Self {
+        Self {
+            id: None,
+            text: crate::model::common::TextSpec {
+                text: text.into(),
+                position_nm: Some(position_nm),
+                attributes,
+                hyperlink: None,
+            },
+            layer_id,
+            knockout: false,
+            locked: ItemLockState::Unlocked,
+        }
+    }
+
+    /// Creates a board text specification on the front silkscreen layer.
+    pub fn front_silkscreen(
+        text: impl Into<String>,
+        position_nm: Vector2Nm,
+        attributes: Option<crate::model::common::TextAttributesSpec>,
+    ) -> Self {
+        Self::new(text, position_nm, BoardLayer::BlFSilkS as i32, attributes)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PcbPadstackDrill {
     pub start_layer: BoardLayerInfo,
@@ -706,7 +801,7 @@ pub enum PcbItem {
 mod tests {
     use std::str::FromStr;
 
-    use super::{BoardOriginKind, DrcSeverity};
+    use super::{BoardLayerInfo, BoardOriginKind, DrcSeverity};
 
     #[test]
     fn board_origin_kind_parses_known_values() {
@@ -724,6 +819,16 @@ mod tests {
     fn board_origin_kind_rejects_unknown_values() {
         let result = BoardOriginKind::from_str("other");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn board_layer_info_resolves_canonical_and_proto_names() {
+        assert_eq!(BoardLayerInfo::id_from_name("F.SilkS"), Some(40));
+        assert_eq!(BoardLayerInfo::id_from_name("BL_F_SilkS"), Some(40));
+        assert_eq!(
+            BoardLayerInfo::canonical_name_for_id(40).as_deref(),
+            Some("F.SilkS")
+        );
     }
 
     #[test]

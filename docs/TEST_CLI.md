@@ -210,13 +210,19 @@ cargo run --features blocking --bin kicad-ipc-cli -- run-action --action pcbnew.
 Create raw Any item payload(s):
 
 ```bash
-cargo run --features blocking --bin kicad-ipc-cli -- create-items --item type.googleapis.com/kiapi.board.types.Text=<hex_payload>
+cargo run --features blocking --bin kicad-ipc-cli -- create-items --item type.googleapis.com/kiapi.board.types.BoardText=<hex_payload>
+```
+
+Create typed board text without hand-encoding protobuf:
+
+```bash
+cargo run --features blocking --bin kicad-ipc-cli -- create-board-text --text "IPC OK" --x-mm 186 --y-mm 90.5 --layer F.SilkS --size-mm 1.5 --stroke-width-mm 0.15
 ```
 
 Update raw Any item payload(s):
 
 ```bash
-cargo run --features blocking --bin kicad-ipc-cli -- update-items --item type.googleapis.com/kiapi.board.types.Text=<hex_payload>
+cargo run --features blocking --bin kicad-ipc-cli -- update-items --item type.googleapis.com/kiapi.board.types.BoardText=<hex_payload>
 ```
 
 Delete items by ID:
@@ -230,6 +236,8 @@ Parse and create items from s-expression:
 ```bash
 cargo run --features blocking --bin kicad-ipc-cli -- parse-create-items --contents "(kicad_pcb (version 20240108))"
 ```
+
+For board text/silkscreen creation, prefer `create-board-text` or raw `create-items`; this follows the typed `CreateItems` path used by kicad-python.
 
 Show summary of current PCB selection by item type:
 
@@ -318,6 +326,8 @@ Dump raw payloads for all PCB object classes:
 ```bash
 cargo run --features blocking --bin kicad-ipc-cli -- items-raw-all-pcb --debug
 ```
+
+This uses one combined `GetItems` request and buckets returned payloads by type, avoiding single-type KiCad rejections for non-top-level PCB enum values.
 
 Check whether pads/vias have flashed padstack shapes on specific layers:
 

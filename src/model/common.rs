@@ -348,6 +348,152 @@ pub struct PcbObjectTypeCode {
     pub name: &'static str,
 }
 
+impl PcbObjectTypeCode {
+    /// Creates the KiCad object type code for PCB footprints.
+    pub const fn new_footprint() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbFootprint as i32,
+            name: "KOT_PCB_FOOTPRINT",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB pads.
+    pub const fn new_pad() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbPad as i32,
+            name: "KOT_PCB_PAD",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB graphic shapes.
+    pub const fn new_shape() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbShape as i32,
+            name: "KOT_PCB_SHAPE",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB text.
+    pub const fn new_text() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbText as i32,
+            name: "KOT_PCB_TEXT",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB text boxes.
+    pub const fn new_textbox() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbTextbox as i32,
+            name: "KOT_PCB_TEXTBOX",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB tracks/traces.
+    pub const fn new_trace() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbTrace as i32,
+            name: "KOT_PCB_TRACE",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB vias.
+    pub const fn new_via() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbVia as i32,
+            name: "KOT_PCB_VIA",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB arcs.
+    pub const fn new_arc() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbArc as i32,
+            name: "KOT_PCB_ARC",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB dimensions.
+    pub const fn new_dimension() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbDimension as i32,
+            name: "KOT_PCB_DIMENSION",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB zones.
+    pub const fn new_zone() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbZone as i32,
+            name: "KOT_PCB_ZONE",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB groups.
+    pub const fn new_group() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbGroup as i32,
+            name: "KOT_PCB_GROUP",
+        }
+    }
+
+    /// Creates the KiCad object type code for PCB barcodes.
+    pub const fn new_barcode() -> Self {
+        Self {
+            code: common_types::KiCadObjectType::KotPcbBarcode as i32,
+            name: "KOT_PCB_BARCODE",
+        }
+    }
+
+    /// Resolves a PCB object type code from its numeric KiCad enum value.
+    pub fn from_code(code: i32) -> Option<Self> {
+        let kind = common_types::KiCadObjectType::try_from(code).ok()?;
+        let name = kind.as_str_name();
+        name.starts_with("KOT_PCB_").then_some(Self { code, name })
+    }
+
+    /// Resolves a PCB object type from a proto enum name or friendly name.
+    ///
+    /// Accepts values like `KOT_PCB_TRACE`, `trace`, `track`, `footprint`,
+    /// `text`, and `silkscreen-text` where applicable.
+    pub fn from_name(value: &str) -> Option<Self> {
+        let normalized = value
+            .trim()
+            .trim_start_matches("KOT_PCB_")
+            .replace(['-', ' '], "_")
+            .to_ascii_uppercase();
+
+        let kind = match normalized.as_str() {
+            "FOOTPRINT" => common_types::KiCadObjectType::KotPcbFootprint,
+            "PAD" => common_types::KiCadObjectType::KotPcbPad,
+            "SHAPE" | "GRAPHIC_SHAPE" | "GRAPHIC" => common_types::KiCadObjectType::KotPcbShape,
+            "REFERENCE_IMAGE" => common_types::KiCadObjectType::KotPcbReferenceImage,
+            "FIELD" => common_types::KiCadObjectType::KotPcbField,
+            "GENERATOR" => common_types::KiCadObjectType::KotPcbGenerator,
+            "TEXT" | "BOARD_TEXT" | "SILKSCREEN_TEXT" => common_types::KiCadObjectType::KotPcbText,
+            "TEXTBOX" | "TEXT_BOX" | "BOARD_TEXTBOX" => {
+                common_types::KiCadObjectType::KotPcbTextbox
+            }
+            "TABLE" => common_types::KiCadObjectType::KotPcbTable,
+            "TABLECELL" | "TABLE_CELL" => common_types::KiCadObjectType::KotPcbTablecell,
+            "TRACE" | "TRACK" => common_types::KiCadObjectType::KotPcbTrace,
+            "VIA" => common_types::KiCadObjectType::KotPcbVia,
+            "ARC" => common_types::KiCadObjectType::KotPcbArc,
+            "MARKER" => common_types::KiCadObjectType::KotPcbMarker,
+            "DIMENSION" => common_types::KiCadObjectType::KotPcbDimension,
+            "ZONE" => common_types::KiCadObjectType::KotPcbZone,
+            "GROUP" => common_types::KiCadObjectType::KotPcbGroup,
+            "BARCODE" => common_types::KiCadObjectType::KotPcbBarcode,
+            _ => common_types::KiCadObjectType::from_str_name(value.trim())?,
+        };
+
+        Some(Self {
+            code: kind as i32,
+            name: kind.as_str_name(),
+        })
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TextHorizontalAlignment {
     Unknown,
@@ -506,7 +652,7 @@ impl std::fmt::Display for ItemHitTestResult {
 
 #[cfg(test)]
 mod tests {
-    use super::{CommitAction, EditorFrameType, MapMergeMode};
+    use super::{CommitAction, EditorFrameType, MapMergeMode, PcbObjectTypeCode};
     use std::str::FromStr;
 
     #[test]
@@ -546,5 +692,17 @@ mod tests {
     #[test]
     fn map_merge_mode_rejects_unknown_values() {
         assert!(MapMergeMode::from_str("upsert").is_err());
+    }
+
+    #[test]
+    fn pcb_object_type_code_resolves_friendly_names() {
+        assert_eq!(
+            PcbObjectTypeCode::from_name("track").map(|value| value.code),
+            Some(PcbObjectTypeCode::new_trace().code)
+        );
+        assert_eq!(
+            PcbObjectTypeCode::from_name("KOT_PCB_FOOTPRINT").map(|value| value.code),
+            Some(PcbObjectTypeCode::new_footprint().code)
+        );
     }
 }

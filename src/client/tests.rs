@@ -2,6 +2,7 @@ use crate::error::KiCadError;
 
 use super::decode::*;
 use super::format::*;
+use super::items::{bucket_items_by_pcb_object_type, pcb_object_type_for_any};
 use super::mappers::*;
 use super::{
     envelope, is_get_open_documents_unhandled, normalize_socket_uri, project_path_from_environment,
@@ -16,23 +17,25 @@ use super::{
 mod tests {
     use super::{
         any_to_pretty_debug, board_editor_appearance_settings_to_proto, board_stackup_to_proto,
-        commit_action_to_proto, decode_pcb_item, drc_severity_to_proto,
-        ensure_item_deletion_status_ok, ensure_item_request_ok, ensure_item_status_ok,
-        is_get_open_documents_unhandled, layer_to_model, map_board_stackup, map_commit_session,
-        map_hit_test_result, map_item_bounding_boxes, map_merge_mode_to_proto,
-        map_polygon_with_holes, map_run_action_status, model_document_to_proto,
-        normalize_socket_uri, pad_netlist_from_footprint_items, project_document_proto,
+        board_text_spec_to_proto, bucket_items_by_pcb_object_type, commit_action_to_proto,
+        decode_pcb_item, drc_severity_to_proto, ensure_item_deletion_status_ok,
+        ensure_item_request_ok, ensure_item_status_ok, is_get_open_documents_unhandled,
+        layer_to_model, map_board_stackup, map_commit_session, map_hit_test_result,
+        map_item_bounding_boxes, map_merge_mode_to_proto, map_polygon_with_holes,
+        map_run_action_status, model_document_to_proto, normalize_socket_uri,
+        pad_netlist_from_footprint_items, pcb_object_type_for_any, project_document_proto,
         project_path_from_environment, resolve_current_project_path, response_payload_as_any,
         select_single_board_document, select_single_project_path, selection_item_detail,
         summarize_item_details, summarize_selection, text_horizontal_alignment_to_proto,
         text_spec_to_proto, KiCadError, KIPRJMOD_ENV, PCB_OBJECT_TYPES,
     };
     use crate::model::board::{
-        BoardLayerInfo, BoardStackup, BoardStackupLayer, BoardStackupLayerType, PcbItem, PcbViaType,
+        BoardLayerInfo, BoardStackup, BoardStackupLayer, BoardStackupLayerType, BoardTextSpec,
+        PcbItem, PcbViaType, Vector2Nm,
     };
     use crate::model::common::{
         CommitAction, DocumentSpecifier, DocumentType, ProjectInfo, TextAttributesSpec,
-        TextHorizontalAlignment, TextSpec,
+        TextHorizontalAlignment, TextSpec, TextVerticalAlignment,
     };
     use prost::Message;
     use std::path::PathBuf;
@@ -1076,6 +1079,93 @@ mod tests {
             attributes.horizontal_alignment,
             crate::proto::kiapi::common::types::HorizontalAlignment::HaCenter as i32
         );
+    }
+
+    #[test]
+    fn board_text_spec_to_proto_matches_kicad_python_defaults() {
+        let spec = BoardTextSpec::front_silkscreen(
+            "SILK",
+            Vector2Nm {
+                x_nm: 186_000_000,
+                y_nm: 90_500_000,
+            },
+            Some(TextAttributesSpec {
+                horizontal_alignment: TextHorizontalAlignment::Center,
+                vertical_alignment: TextVerticalAlignment::Center,
+                stroke_width_nm: Some(150_000),
+                size_nm: Some(Vector2Nm {
+                    x_nm: 1_500_000,
+                    y_nm: 1_500_000,
+                }),
+                ..TextAttributesSpec::default()
+            }),
+        );
+
+        let proto = board_text_spec_to_proto(spec);
+        assert!(
+            proto.id.is_none(),
+            "unset IDs should let KiCad assign the created text KIID"
+        );
+        assert_eq!(
+            proto.layer,
+            crate::proto::kiapi::board::types::BoardLayer::BlFSilkS as i32
+        );
+        assert_eq!(
+            proto.locked,
+            crate::proto::kiapi::common::types::LockedState::LsUnlocked as i32
+        );
+        let text = proto.text.expect("text payload should be present");
+        assert_eq!(text.text, "SILK");
+        assert_eq!(
+            text.position.map(|point| (point.x_nm, point.y_nm)),
+            Some((186_000_000, 90_500_000))
+        );
+        let attributes = text.attributes.expect("attributes should be present");
+        assert_eq!(
+            attributes.horizontal_alignment,
+            crate::proto::kiapi::common::types::HorizontalAlignment::HaCenter as i32
+        );
+        assert_eq!(
+            attributes.stroke_width.map(|width| width.value_nm),
+            Some(150_000)
+        );
+    }
+
+    #[test]
+    fn bucket_items_by_pcb_object_type_groups_combined_get_items_response() {
+        let track = crate::proto::kiapi::board::types::Track::default();
+        let text = crate::proto::kiapi::board::types::BoardText::default();
+        let rows = bucket_items_by_pcb_object_type(vec![
+            prost_types::Any {
+                type_url: super::envelope::type_url("kiapi.board.types.Track"),
+                value: track.encode_to_vec(),
+            },
+            prost_types::Any {
+                type_url: super::envelope::type_url("kiapi.board.types.BoardText"),
+                value: text.encode_to_vec(),
+            },
+        ]);
+
+        let trace_bucket = rows
+            .iter()
+            .find(|(object_type, _)| object_type.name == "KOT_PCB_TRACE")
+            .expect("trace bucket should exist");
+        assert_eq!(trace_bucket.1.len(), 1);
+        let text_bucket = rows
+            .iter()
+            .find(|(object_type, _)| object_type.name == "KOT_PCB_TEXT")
+            .expect("text bucket should exist");
+        assert_eq!(text_bucket.1.len(), 1);
+    }
+
+    #[test]
+    fn pcb_object_type_for_any_maps_board_text() {
+        let item = prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.types.BoardText"),
+            value: Vec::new(),
+        };
+        let object_type = pcb_object_type_for_any(&item).expect("board text should map");
+        assert_eq!(object_type.name, "KOT_PCB_TEXT");
     }
 
     #[test]
