@@ -452,7 +452,9 @@ impl KiCadClientBlocking {
         fn create_items(&self, items: Vec<Any>, container_id: Option<String>) -> Result<Vec<Any>, KiCadError>;
         fn create_editable_items(&self, items: Vec<EditablePcbItem>, container_id: Option<String>) -> Result<Vec<EditablePcbItem>, KiCadError>;
         fn create_board_text(&self, spec: BoardTextSpec) -> Result<PcbBoardText, KiCadError>;
+        fn create_board_text_in_container(&self, spec: BoardTextSpec, container_id: String) -> Result<PcbBoardText, KiCadError>;
         fn create_board_texts(&self, specs: Vec<BoardTextSpec>) -> Result<Vec<PcbBoardText>, KiCadError>;
+        fn create_board_texts_in_container(&self, specs: Vec<BoardTextSpec>, container_id: String) -> Result<Vec<PcbBoardText>, KiCadError>;
         fn update_items_raw(&self, items: Vec<Any>) -> Result<Any, KiCadError>;
         fn update_items(&self, items: Vec<Any>) -> Result<Vec<Any>, KiCadError>;
         fn update_editable_items(&self, items: Vec<EditablePcbItem>) -> Result<Vec<EditablePcbItem>, KiCadError>;

@@ -410,12 +410,12 @@ Previously reported version drift has been fixed and is no longer an active risk
 
 Resolved evidence:
 
-- `README.md:27` → `0.4.1` ✓
-- `README.md:67` → `0.4.1` ✓
-- `docs/book/src/quickstart.md:15` → `0.4.1` ✓
-- `docs/book/src/quickstart.md:42` → `0.4.1` ✓
-- `Cargo.toml` crate version → `0.4.1` ✓
-- `CHANGELOG.md` includes `[0.4.1]` entry ✓
+- `README.md` async snippet → `0.4.4` ✓
+- `README.md` blocking snippet → `0.4.4` ✓
+- `docs/book/src/quickstart.md` async snippet → `0.4.4` ✓
+- `docs/book/src/quickstart.md` blocking snippet → `0.4.4` ✓
+- `Cargo.toml` crate version → `0.4.4` ✓
+- `CHANGELOG.md` includes `[0.4.4]` entry ✓
 
 Impact: The highest-friction onboarding mismatch from the initial report has been addressed.
 

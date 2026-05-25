@@ -32,10 +32,14 @@ Reason: fail fast on document state before expensive item traversal.
 Use begin/end commit around mutating commands.
 
 1. `begin_commit(...)`
-2. `create_items(...)` / `update_items(...)` / `update_editable_items(...)` / `delete_items(...)`
+2. `create_items(...)` / `create_board_text(...)` / `update_items(...)` / `update_editable_items(...)` / `delete_items(...)`
 3. `end_commit(..., CommitAction::Commit, ...)`
 
 If errors mid-flight: close with `CommitAction::Abort`/`Drop` per flow.
+
+For board text and silkscreen, prefer `create_board_text(...)` / `create_board_texts(...)` over `parse_and_create_items_from_string(...)`. The typed helpers use KiCad's `CreateItems` command directly, matching kicad-python's `BoardText` flow.
+
+`delete_items(...)` returns ids reported by KiCad. On KiCad 10.0.x, a successful delete can omit per-item rows; then the method returns the requested ids after KiCad acknowledges the command. Treat those ids as accepted, not independently verified deleted.
 
 ## Pattern: Editable Item Mutation
 

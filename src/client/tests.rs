@@ -2,7 +2,9 @@ use crate::error::KiCadError;
 
 use super::decode::*;
 use super::format::*;
-use super::items::{bucket_items_by_pcb_object_type, pcb_object_type_for_any};
+use super::items::{
+    bucket_items_by_pcb_object_type, deleted_item_ids_from_response, pcb_object_type_for_any,
+};
 use super::mappers::*;
 use super::{
     envelope, is_get_open_documents_unhandled, normalize_socket_uri, project_path_from_environment,
@@ -18,16 +20,17 @@ mod tests {
     use super::{
         any_to_pretty_debug, board_editor_appearance_settings_to_proto, board_stackup_to_proto,
         board_text_spec_to_proto, bucket_items_by_pcb_object_type, commit_action_to_proto,
-        decode_pcb_item, drc_severity_to_proto, ensure_item_deletion_status_ok,
-        ensure_item_request_ok, ensure_item_status_ok, is_get_open_documents_unhandled,
-        layer_to_model, map_board_stackup, map_commit_session, map_hit_test_result,
-        map_item_bounding_boxes, map_merge_mode_to_proto, map_polygon_with_holes,
-        map_run_action_status, model_document_to_proto, normalize_socket_uri,
-        pad_netlist_from_footprint_items, pcb_object_type_for_any, project_document_proto,
-        project_path_from_environment, resolve_current_project_path, response_payload_as_any,
-        select_single_board_document, select_single_project_path, selection_item_detail,
-        summarize_item_details, summarize_selection, text_horizontal_alignment_to_proto,
-        text_spec_to_proto, KiCadError, KIPRJMOD_ENV, PCB_OBJECT_TYPES,
+        decode_pcb_item, deleted_item_ids_from_response, drc_severity_to_proto,
+        ensure_item_deletion_status_ok, ensure_item_request_ok, ensure_item_status_ok,
+        is_get_open_documents_unhandled, layer_to_model, map_board_stackup, map_commit_session,
+        map_hit_test_result, map_item_bounding_boxes, map_merge_mode_to_proto,
+        map_polygon_with_holes, map_run_action_status, model_document_to_proto,
+        normalize_socket_uri, pad_netlist_from_footprint_items, pcb_object_type_for_any,
+        project_document_proto, project_path_from_environment, resolve_current_project_path,
+        response_payload_as_any, select_single_board_document, select_single_project_path,
+        selection_item_detail, summarize_item_details, summarize_selection,
+        text_horizontal_alignment_to_proto, text_spec_to_proto, KiCadError, KIPRJMOD_ENV,
+        PCB_OBJECT_TYPES,
     };
     use crate::model::board::{
         BoardLayerInfo, BoardStackup, BoardStackupLayer, BoardStackupLayerType, BoardTextSpec,
@@ -1144,7 +1147,8 @@ mod tests {
                 type_url: super::envelope::type_url("kiapi.board.types.BoardText"),
                 value: text.encode_to_vec(),
             },
-        ]);
+        ])
+        .expect("known item types should bucket");
 
         let trace_bucket = rows
             .iter()
@@ -1156,6 +1160,36 @@ mod tests {
             .find(|(object_type, _)| object_type.name == "KOT_PCB_TEXT")
             .expect("text bucket should exist");
         assert_eq!(text_bucket.1.len(), 1);
+        let total_bucketed: usize = rows.iter().map(|(_, items)| items.len()).sum();
+        assert_eq!(total_bucketed, 2);
+    }
+
+    #[test]
+    fn bucket_items_by_pcb_object_type_rejects_unmapped_payloads() {
+        let err = bucket_items_by_pcb_object_type(vec![prost_types::Any {
+            type_url: super::envelope::type_url("kiapi.board.types.FutureThing"),
+            value: Vec::new(),
+        }])
+        .expect_err("unknown returned item types should not be silently dropped");
+
+        assert!(err
+            .to_string()
+            .contains("GetItems returned unmapped PCB item type"));
+    }
+
+    #[test]
+    fn deleted_item_ids_from_response_falls_back_to_requested_ids_for_empty_success_rows() {
+        let ids = deleted_item_ids_from_response(
+            vec!["item-1".to_string()],
+            crate::proto::kiapi::common::commands::DeleteItemsResponse {
+                status: crate::proto::kiapi::common::types::ItemRequestStatus::IrsOk as i32,
+                deleted_items: Vec::new(),
+                ..Default::default()
+            },
+        )
+        .expect("empty successful delete response should use requested ids");
+
+        assert_eq!(ids, vec!["item-1".to_string()]);
     }
 
     #[test]

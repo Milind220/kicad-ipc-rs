@@ -231,6 +231,8 @@ Delete items by ID:
 cargo run --features blocking --bin kicad-ipc-cli -- delete-items --id <uuid> --id <uuid>
 ```
 
+KiCad 10.0.x may acknowledge `DeleteItems` without per-item rows. In that case the library/CLI reports the requested IDs after KiCad accepts the command.
+
 Parse and create items from s-expression:
 
 ```bash

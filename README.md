@@ -37,7 +37,7 @@ Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-kicad-ipc-rs = "0.4.1"
+kicad-ipc-rs = "0.4.4"
 tokio = { version = "1", features = ["macros", "rt"] }
 ```
 
@@ -168,6 +168,11 @@ client.update_editable_items(items).await?;
 `EditablePcbItem` wrappers also expose `proto()` / `proto_mut()` / `into_proto()` as advanced
 escape hatches when you need direct protobuf access.
 
+For board text and silkscreen creation, prefer `create_board_text` / `create_board_texts`.
+These helpers send typed `CreateItems` payloads, matching kicad-python's direct `BoardText`
+flow. `get_all_pcb_items*` uses one combined `GetItems` request and fails if KiCad returns an
+unmapped item type, so returned payloads are not silently dropped.
+
 ## Examples
 Run the included examples against a running KiCad instance:
 
@@ -225,7 +230,7 @@ All 57 KiCad v10.0.0 API commands are implemented:
 | `RevertDocument` | `KiCadClient::revert_document` |
 | `RunAction` | `KiCadClient::run_action` |
 | `BeginCommit` / `EndCommit` | `KiCadClient::begin_commit`, `end_commit` |
-| `CreateItems` | `KiCadClient::create_items`, `create_editable_items`, `create_board_text` |
+| `CreateItems` | `KiCadClient::create_items`, `create_editable_items`, `create_board_text`, `create_board_texts` |
 | `GetItems` | `KiCadClient::get_items_by_type_codes`, `get_all_pcb_items`, `get_pad_netlist` |
 | `GetItemsById` | `KiCadClient::get_items_by_id` |
 | `UpdateItems` | `KiCadClient::update_items` |

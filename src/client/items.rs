@@ -144,13 +144,45 @@ impl KiCadClient {
         })
     }
 
+    /// Creates one board text item inside an existing board container.
+    pub async fn create_board_text_in_container(
+        &self,
+        spec: BoardTextSpec,
+        container_id: String,
+    ) -> Result<PcbBoardText, KiCadError> {
+        let mut created = self
+            .create_board_texts_in_container(vec![spec], container_id)
+            .await?;
+        created.pop().ok_or_else(|| KiCadError::InvalidResponse {
+            reason: "CreateItems returned no board text item".to_string(),
+        })
+    }
+
     /// Creates board text items through typed `CreateItems`.
     pub async fn create_board_texts(
         &self,
         specs: Vec<BoardTextSpec>,
     ) -> Result<Vec<PcbBoardText>, KiCadError> {
+        self.create_board_texts_with_container(specs, None).await
+    }
+
+    /// Creates board text items inside an existing board container.
+    pub async fn create_board_texts_in_container(
+        &self,
+        specs: Vec<BoardTextSpec>,
+        container_id: String,
+    ) -> Result<Vec<PcbBoardText>, KiCadError> {
+        self.create_board_texts_with_container(specs, Some(container_id))
+            .await
+    }
+
+    async fn create_board_texts_with_container(
+        &self,
+        specs: Vec<BoardTextSpec>,
+        container_id: Option<String>,
+    ) -> Result<Vec<PcbBoardText>, KiCadError> {
         let items = specs.into_iter().map(board_text_spec_to_any).collect();
-        let created = self.create_items(items, None).await?;
+        let created = self.create_items(items, container_id).await?;
         created
             .into_iter()
             .map(|item| match decode_pcb_item(item)? {
@@ -237,34 +269,17 @@ impl KiCadClient {
 
     /// Deletes items by id from the active PCB document.
     ///
-    /// Returns ids of items accepted for deletion by KiCad.
+    /// Returns ids that KiCad reported as deleted.
     ///
-    /// KiCad 10.0.x acknowledges `DeleteItems` but omits per-item result rows;
-    /// in that case this method returns the requested ids after request success,
-    /// matching kicad-python's success-oriented delete wrapper behavior.
+    /// KiCad 10.0.x can acknowledge `DeleteItems` but omit per-item result rows;
+    /// in that case this method returns the requested ids after request success.
+    /// Treat those ids as accepted by KiCad, not independently verified deleted.
     pub async fn delete_items(&self, item_ids: Vec<String>) -> Result<Vec<String>, KiCadError> {
         let requested_item_ids = item_ids.clone();
         let payload = self.delete_items_raw(item_ids).await?;
         let response: common_commands::DeleteItemsResponse =
             decode_any(&payload, RES_DELETE_ITEMS_RESPONSE)?;
-        ensure_item_request_ok(response.status)?;
-
-        if response.deleted_items.is_empty() {
-            return Ok(requested_item_ids);
-        }
-
-        response
-            .deleted_items
-            .into_iter()
-            .map(|row| {
-                ensure_item_deletion_status_ok(row.status)?;
-                row.id
-                    .map(|id| id.value)
-                    .ok_or_else(|| KiCadError::InvalidResponse {
-                        reason: "DeleteItemsResponse missing deleted item id".to_string(),
-                    })
-            })
-            .collect()
+        deleted_item_ids_from_response(requested_item_ids, response)
     }
 
     /// Parses KiCad item text and creates items, returning raw create-items payload.
@@ -402,7 +417,7 @@ impl KiCadClient {
                     .collect(),
             )
             .await?;
-        Ok(bucket_items_by_pcb_object_type(items))
+        bucket_items_by_pcb_object_type(items)
     }
 
     /// Fetches all known object type buckets and returns decoded detail rows.
@@ -563,7 +578,7 @@ pub(crate) fn pcb_object_type_for_any(item: &prost_types::Any) -> Option<PcbObje
 
 pub(crate) fn bucket_items_by_pcb_object_type(
     items: Vec<prost_types::Any>,
-) -> Vec<(PcbObjectTypeCode, Vec<prost_types::Any>)> {
+) -> Result<Vec<(PcbObjectTypeCode, Vec<prost_types::Any>)>, KiCadError> {
     let mut rows: Vec<_> = PCB_OBJECT_TYPES
         .iter()
         .copied()
@@ -571,15 +586,43 @@ pub(crate) fn bucket_items_by_pcb_object_type(
         .collect();
 
     for item in items {
-        if let Some(object_type) = pcb_object_type_for_any(&item) {
-            if let Some((_, bucket)) = rows
-                .iter_mut()
-                .find(|(row_type, _)| row_type.code == object_type.code)
-            {
-                bucket.push(item);
-            }
+        let type_url = item.type_url.clone();
+        let object_type =
+            pcb_object_type_for_any(&item).ok_or_else(|| KiCadError::InvalidResponse {
+                reason: format!("GetItems returned unmapped PCB item type `{type_url}`"),
+            })?;
+
+        if let Some((_, bucket)) = rows
+            .iter_mut()
+            .find(|(row_type, _)| row_type.code == object_type.code)
+        {
+            bucket.push(item);
         }
     }
 
-    rows
+    Ok(rows)
+}
+
+pub(crate) fn deleted_item_ids_from_response(
+    requested_item_ids: Vec<String>,
+    response: common_commands::DeleteItemsResponse,
+) -> Result<Vec<String>, KiCadError> {
+    ensure_item_request_ok(response.status)?;
+
+    if response.deleted_items.is_empty() {
+        return Ok(requested_item_ids);
+    }
+
+    response
+        .deleted_items
+        .into_iter()
+        .map(|row| {
+            ensure_item_deletion_status_ok(row.status)?;
+            row.id
+                .map(|id| id.value)
+                .ok_or_else(|| KiCadError::InvalidResponse {
+                    reason: "DeleteItemsResponse missing deleted item id".to_string(),
+                })
+        })
+        .collect()
 }
