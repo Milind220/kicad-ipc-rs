@@ -15,8 +15,8 @@
         <link rel="icon" href="favicon-de23e50b.svg">
         <link rel="shortcut icon" href="favicon-8114d1fc.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-2459343d.css">
-        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/general-0392ca55.css">
+        <link rel="stylesheet" href="css/chrome-fc474251.css">
         <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5f582276.js";
+            window.path_to_searchindex_js = "searchindex-fee6e7ba.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-cba1521b.js"></script>
+        <script src="toc-ebf92660.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,6 +195,12 @@
 <li>Read model: <code>PcbItem</code> and related <code>Pcb*</code> structs are lightweight decoded models for inspection.</li>
 <li>Editable model: <code>EditablePcbItem</code> and typed wrappers preserve the full protobuf payload for mutate/update workflows.</li>
 </ul>
+<p>Raw command escape hatch:</p>
+<ul>
+<li><code>KiCadClient::send_raw_command(...)</code></li>
+<li><code>KiCadClientBlocking::send_raw_command(...)</code> (<code>blocking</code> feature)</li>
+</ul>
+<p>Use this when KiCad exposes a protobuf command that does not yet have a typed helper.</p>
 <p>Editable item helpers:</p>
 <ul>
 <li><code>get_editable_items_by_id(...)</code></li>
@@ -203,6 +209,32 @@
 <li><code>update_editable_items(...)</code></li>
 </ul>
 <p>Use <code>EditablePcbItem</code> when you need to fetch existing board items, mutate fields like layer or position, and write them back through KiCad IPC without hand-building protobuf <code>Any</code> payloads. The editable wrappers expose <code>proto()</code>, <code>proto_mut()</code>, and <code>into_proto()</code> as advanced escape hatches when typed helpers are not enough.</p>
+<p>Typed board text helpers:</p>
+<ul>
+<li><code>create_board_text(...)</code></li>
+<li><code>create_board_texts(...)</code></li>
+<li><code>create_board_text_in_container(...)</code></li>
+<li><code>create_board_texts_in_container(...)</code></li>
+</ul>
+<p>These helpers build <code>kiapi.board.types.BoardText</code> payloads and send typed <code>CreateItems</code>, matching kicad-python’s direct <code>BoardText</code> creation path. Prefer them for silkscreen and board text creation instead of <code>parse_and_create_items_from_string(...)</code>.</p>
+<p>All-PCB item reads:</p>
+<ul>
+<li><code>get_all_pcb_items_raw(...)</code></li>
+<li><code>get_all_pcb_items_details(...)</code></li>
+<li><code>get_all_pcb_items(...)</code></li>
+</ul>
+<p>These methods use one combined <code>GetItems</code> request for the known PCB object classes, then bucket returned payloads by KiCad item type. If KiCad returns a payload type the crate cannot map, the call returns <code>KiCadError::InvalidResponse</code> instead of silently dropping it.</p>
+<p>Deletion notes:</p>
+<ul>
+<li><code>delete_items(...)</code> returns ids reported by KiCad as deleted.</li>
+<li>KiCad 10.0.x may acknowledge <code>DeleteItems</code> with no per-item rows. In that case <code>delete_items(...)</code> returns the requested ids after request success; treat them as accepted by KiCad, not independently verified deleted.</li>
+</ul>
+<p>Object and layer lookup helpers:</p>
+<ul>
+<li><code>PcbObjectTypeCode::from_name(...)</code> accepts proto names and friendly names like <code>trace</code>, <code>track</code>, <code>footprint</code>, <code>pad</code>, <code>text</code>, and <code>silkscreen-text</code>.</li>
+<li><code>PcbObjectTypeCode::new_trace()</code>, <code>new_pad()</code>, <code>new_text()</code>, and related constructors avoid hardcoded object type numbers.</li>
+<li><code>BoardLayerInfo::id_from_name(...)</code> and <code>canonical_name_for_id(...)</code> resolve KiCad board layer names such as <code>F.SilkS</code> and protobuf names such as <code>BL_F_SilkS</code>.</li>
+</ul>
 <p>Selection API notes:</p>
 <ul>
 <li><code>get_selection_*</code> methods now take <code>type_codes: Vec&lt;i32&gt;</code> (<code>Vec::new()</code> means no filter).</li>
@@ -258,11 +290,11 @@
 
         <script src="elasticlunr-ef4e11c1.min.js"></script>
         <script src="mark-09e88c2c.min.js"></script>
-        <script src="searcher-c2a407aa.js"></script>
+        <script src="searcher-09f2665d.js"></script>
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-abc7f01d.js"></script>
-        <script src="book-a0b12cfe.js"></script>
+        <script src="book-c22b7243.js"></script>
 
         <!-- Custom JS scripts -->
 

@@ -16,8 +16,8 @@
         <link rel="icon" href="favicon-de23e50b.svg">
         <link rel="shortcut icon" href="favicon-8114d1fc.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-2459343d.css">
-        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/general-0392ca55.css">
+        <link rel="stylesheet" href="css/chrome-fc474251.css">
         <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5f582276.js";
+            window.path_to_searchindex_js = "searchindex-fee6e7ba.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-cba1521b.js"></script>
+        <script src="toc-ebf92660.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -243,7 +243,7 @@
 <h2 id="async-api-default"><a class="header" href="#async-api-default">Async API (default)</a></h2>
 <p><code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependencies]
-kicad-ipc-rs = "0.4.3"
+kicad-ipc-rs = "0.5.0"
 tokio = { version = "1", features = ["macros", "rt"] }
 </code></pre>
 <pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClient;
@@ -263,7 +263,7 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 <h2 id="blocking-api"><a class="header" href="#blocking-api">Blocking API</a></h2>
 <p><code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependencies]
-kicad-ipc-rs = { version = "0.4.3", features = ["blocking"] }
+kicad-ipc-rs = { version = "0.5.0", features = ["blocking"] }
 </code></pre>
 <pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::KiCadClientBlocking;
 
@@ -320,10 +320,12 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
 <p>Use begin/end commit around mutating commands.</p>
 <ol>
 <li><code>begin_commit(...)</code></li>
-<li><code>create_items(...)</code> / <code>update_items(...)</code> / <code>update_editable_items(...)</code> / <code>delete_items(...)</code></li>
+<li><code>create_items(...)</code> / <code>create_board_text(...)</code> / <code>update_items(...)</code> / <code>update_editable_items(...)</code> / <code>delete_items(...)</code></li>
 <li><code>end_commit(..., CommitAction::Commit, ...)</code></li>
 </ol>
 <p>If errors mid-flight: close with <code>CommitAction::Abort</code>/<code>Drop</code> per flow.</p>
+<p>For board text and silkscreen, prefer <code>create_board_text(...)</code> / <code>create_board_texts(...)</code> over <code>parse_and_create_items_from_string(...)</code>. The typed helpers use KiCad’s <code>CreateItems</code> command directly, matching kicad-python’s <code>BoardText</code> flow.</p>
+<p><code>delete_items(...)</code> returns ids reported by KiCad. On KiCad 10.0.x, a successful delete can omit per-item rows; then the method returns the requested ids after KiCad acknowledges the command. Treat those ids as accepted, not independently verified deleted.</p>
 <h2 id="pattern-editable-item-mutation"><a class="header" href="#pattern-editable-item-mutation">Pattern: Editable Item Mutation</a></h2>
 <p>Use <code>EditablePcbItem</code> when you want to round-trip existing board items without manually decoding and packing protobuf <code>Any</code> payloads.</p>
 <pre class="playground"><code class="language-rust no_run">use kicad_ipc_rs::{CommitAction, EditablePcbItem, KiCadClient};
@@ -487,7 +489,7 @@ async fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
     
     // Get all footprints
     let footprints = client.get_items_by_type_codes(vec![
-        PcbObjectTypeCode::new_footprint()
+        PcbObjectTypeCode::new_footprint().code
     ]).await?;
     
     let mut by_lib: std::collections::HashMap&lt;String, usize&gt; = std::collections::HashMap::new();
@@ -671,7 +673,7 @@ fn main() -&gt; Result&lt;(), kicad_ipc_rs::KiCadError&gt; {
     
     // Get all tracks
     let tracks = client.get_items_by_type_codes(vec![
-        kicad_ipc_rs::PcbObjectTypeCode::new_trace()
+        kicad_ipc_rs::PcbObjectTypeCode::new_trace().code
     ])?;
     
     // Select first 5 tracks
@@ -705,7 +707,7 @@ cargo run --features blocking --bin kicad-ipc-cli -- version
 # Board queries
 cargo run --features blocking --bin kicad-ipc-cli -- board-open
 cargo run --features blocking --bin kicad-ipc-cli -- nets
-cargo run --features blocking --bin kicad-ipc-cli -- pcb-types
+cargo run --features blocking --bin kicad-ipc-cli -- types-pcb
 
 # Selection
 cargo run --features blocking --bin kicad-ipc-cli -- selection-summary
@@ -737,8 +739,11 @@ cargo test --features blocking
 <li><a href="https://github.com/Milind220/kicad-ipc-rs/blob/main/test-scripts/kicad-ipc-cli.rs"><code>test-scripts/kicad-ipc-cli.rs</code></a></li>
 </ul>
 </li>
-<li>Runtime command coverage matrix:</li>
-<li><a href="https://github.com/Milind220/kicad-ipc-rs#kicad-v1000-api-reference">README coverage section</a></li>
+<li>Runtime command coverage matrix:
+<ul>
+<li><a href="https://github.com/Milind220/kicad-ipc-rs#kicad-v1001-api-reference">README coverage section</a></li>
+</ul>
+</li>
 <li>Runtime CLI verification flow:
 <ul>
 <li><a href="https://github.com/Milind220/kicad-ipc-rs/blob/main/docs/TEST_CLI.md">docs/TEST_CLI.md</a></li>
@@ -769,6 +774,12 @@ cargo test --features blocking
 <li>Read model: <code>PcbItem</code> and related <code>Pcb*</code> structs are lightweight decoded models for inspection.</li>
 <li>Editable model: <code>EditablePcbItem</code> and typed wrappers preserve the full protobuf payload for mutate/update workflows.</li>
 </ul>
+<p>Raw command escape hatch:</p>
+<ul>
+<li><code>KiCadClient::send_raw_command(...)</code></li>
+<li><code>KiCadClientBlocking::send_raw_command(...)</code> (<code>blocking</code> feature)</li>
+</ul>
+<p>Use this when KiCad exposes a protobuf command that does not yet have a typed helper.</p>
 <p>Editable item helpers:</p>
 <ul>
 <li><code>get_editable_items_by_id(...)</code></li>
@@ -777,6 +788,32 @@ cargo test --features blocking
 <li><code>update_editable_items(...)</code></li>
 </ul>
 <p>Use <code>EditablePcbItem</code> when you need to fetch existing board items, mutate fields like layer or position, and write them back through KiCad IPC without hand-building protobuf <code>Any</code> payloads. The editable wrappers expose <code>proto()</code>, <code>proto_mut()</code>, and <code>into_proto()</code> as advanced escape hatches when typed helpers are not enough.</p>
+<p>Typed board text helpers:</p>
+<ul>
+<li><code>create_board_text(...)</code></li>
+<li><code>create_board_texts(...)</code></li>
+<li><code>create_board_text_in_container(...)</code></li>
+<li><code>create_board_texts_in_container(...)</code></li>
+</ul>
+<p>These helpers build <code>kiapi.board.types.BoardText</code> payloads and send typed <code>CreateItems</code>, matching kicad-python’s direct <code>BoardText</code> creation path. Prefer them for silkscreen and board text creation instead of <code>parse_and_create_items_from_string(...)</code>.</p>
+<p>All-PCB item reads:</p>
+<ul>
+<li><code>get_all_pcb_items_raw(...)</code></li>
+<li><code>get_all_pcb_items_details(...)</code></li>
+<li><code>get_all_pcb_items(...)</code></li>
+</ul>
+<p>These methods use one combined <code>GetItems</code> request for the known PCB object classes, then bucket returned payloads by KiCad item type. If KiCad returns a payload type the crate cannot map, the call returns <code>KiCadError::InvalidResponse</code> instead of silently dropping it.</p>
+<p>Deletion notes:</p>
+<ul>
+<li><code>delete_items(...)</code> returns ids reported by KiCad as deleted.</li>
+<li>KiCad 10.0.x may acknowledge <code>DeleteItems</code> with no per-item rows. In that case <code>delete_items(...)</code> returns the requested ids after request success; treat them as accepted by KiCad, not independently verified deleted.</li>
+</ul>
+<p>Object and layer lookup helpers:</p>
+<ul>
+<li><code>PcbObjectTypeCode::from_name(...)</code> accepts proto names and friendly names like <code>trace</code>, <code>track</code>, <code>footprint</code>, <code>pad</code>, <code>text</code>, and <code>silkscreen-text</code>.</li>
+<li><code>PcbObjectTypeCode::new_trace()</code>, <code>new_pad()</code>, <code>new_text()</code>, and related constructors avoid hardcoded object type numbers.</li>
+<li><code>BoardLayerInfo::id_from_name(...)</code> and <code>canonical_name_for_id(...)</code> resolve KiCad board layer names such as <code>F.SilkS</code> and protobuf names such as <code>BL_F_SilkS</code>.</li>
+</ul>
 <p>Selection API notes:</p>
 <ul>
 <li><code>get_selection_*</code> methods now take <code>type_codes: Vec&lt;i32&gt;</code> (<code>Vec::new()</code> means no filter).</li>
@@ -826,11 +863,11 @@ cargo test --features blocking
 
         <script src="elasticlunr-ef4e11c1.min.js"></script>
         <script src="mark-09e88c2c.min.js"></script>
-        <script src="searcher-c2a407aa.js"></script>
+        <script src="searcher-09f2665d.js"></script>
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-abc7f01d.js"></script>
-        <script src="book-a0b12cfe.js"></script>
+        <script src="book-c22b7243.js"></script>
 
         <!-- Custom JS scripts -->
 
